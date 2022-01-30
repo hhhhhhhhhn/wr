@@ -25,7 +25,7 @@ type Location struct {
 	Column int
 }
 
-func (e *Editor) AddEdit(edit Edit) {
+func (e *Editor) Do(edit Edit) {
 	e.History = append(e.History[:e.HistoryIndex], edit)
 	e.HistoryIndex++
 	edit.Do(e)
@@ -57,8 +57,8 @@ func (e *Editor) Redo() {
 	}
 }
 
-func (e *Editor) AddCursorEdit(cursorEdit CursorEdit) {
-	e.AddEdit(newCursorEditEdit(cursorEdit))
+func (e *Editor) CursorDo(cursorEdit CursorEdit) {
+	e.Do(wrapCursorEdit(cursorEdit))
 }
 
 func LocationToLineIndex(editor *Editor, location Location) int {

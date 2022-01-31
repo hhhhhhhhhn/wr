@@ -11,61 +11,61 @@ type Edit interface {
 // Structs in lower and Constructurs in upper
 type undoMarker struct {}
 
-func UndoMarker() undoMarker {
-	return undoMarker{}
+func UndoMarker() *undoMarker {
+	return &undoMarker{}
 }
 
-func (u undoMarker) Do(*Editor) {}
-func (u undoMarker) Undo(*Editor) {}
-func (u undoMarker) Name() string { return "Undo Marker" }
+func (u *undoMarker) Do(*Editor) {}
+func (u *undoMarker) Undo(*Editor) {}
+func (u *undoMarker) Name() string { return "Undo Marker" }
 
 type pushCursor struct {
 	_range *Range
 }
 
-func PushCursor(_range *Range) pushCursor {
-	return pushCursor{_range}
+func PushCursor(_range *Range) *pushCursor {
+	return &pushCursor{_range}
 }
 
-func (p pushCursor) Do(e *Editor) {
+func (p *pushCursor) Do(e *Editor) {
 	e.Cursors = append(e.Cursors, p._range)
 }
 
-func (p pushCursor) Undo(e *Editor) {
+func (p *pushCursor) Undo(e *Editor) {
 	e.Cursors = e.Cursors[:len(e.Cursors) - 1]
 }
 
-func (p pushCursor) Name() string {
+func (p *pushCursor) Name() string {
 	return "Push Cursor"
 }
 
 // Used internally, for converting cursorEdits into Edits
 type cursorEditWrapper struct {
-	cursorEdit CursorEdit
+	cursorEdit    CursorEdit
+	sortedCursors []*Range
 }
 
-func wrapCursorEdit(cursorEdit CursorEdit) cursorEditWrapper {
-	return cursorEditWrapper{cursorEdit}
+func wrapCursorEdit(cursorEdit CursorEdit) *cursorEditWrapper {
+	return &cursorEditWrapper{cursorEdit, nil}
 }
 
-func (c cursorEditWrapper) Do(e *Editor) {
-	sortedCursors := SortCursors(e.Cursors)
+func (c *cursorEditWrapper) Do(e *Editor) {
+	c.sortedCursors = SortCursors(e.Cursors)
 	// CursorEdits are done in reverse cursor order, as, for example,
 	// inserting a line messes with the location of the cursors
 	// following the insert.
-	for i := len(sortedCursors) - 1; i >= 0; i-- {
-		c.cursorEdit.Do(e, sortedCursors[i])
+	for i := len(c.sortedCursors) - 1; i >= 0; i-- {
+		c.cursorEdit.Do(e, c.sortedCursors[i])
 	}
 }
 
-func (c cursorEditWrapper) Undo(e *Editor) {
-	sortedCursors := SortCursors(e.Cursors)
-	for _, cursor := range sortedCursors {
+func (c *cursorEditWrapper) Undo(e *Editor) {
+	for _, cursor := range c.sortedCursors {
 		c.cursorEdit.Undo(e, cursor)
 	}
 }
 
-func (c cursorEditWrapper) Name() string {
+func (c *cursorEditWrapper) Name() string {
 	return c.cursorEdit.Name()
 }
 
@@ -75,85 +75,158 @@ type CursorEdit interface {
 	Name() string
 }
 
-type split struct {
+type singleSplit struct {
 	originalCursors map[*Range]Range
+	row             int
+	column          int
 }
 
-func Split() split {
-	return split{make(map[*Range]Range)}
+func SingleSplit(row, column int) *singleSplit {
+	return &singleSplit{make(map[*Range]Range), row, column}
 }
 
-func (s split) Do(editor *Editor, cursor *Range) {
-	s.originalCursors[cursor] = *cursor
+func (s *singleSplit) Do(editor *Editor) {
+	copyCursors(editor, s.originalCursors)
 
-	line := editor.Buffer.GetLine(cursor.Start.Row)
-	lineIndex := LocationToLineIndex(editor, cursor.Start)
+	line := editor.Buffer.GetLine(s.row)
+	lineIndex := LocationToLineIndex(editor, Location{s.row, s.column})
 
 	line1 := line[:lineIndex]
 	line2 := line[lineIndex:]
 
-	editor.Buffer.ChangeLine(cursor.Start.Row, line1)
-	editor.Buffer.AddLine(cursor.Start.Row + 1, line2)
+	editor.Buffer.ChangeLine(s.row, line1)
+	editor.Buffer.AddLine(s.row + 1, line2)
 
-	*cursor = Range{Location{cursor.Start.Row + 1, 0}, Location{cursor.Start.Row+1, 1}}
+	for _, cursor := range editor.Cursors {
+		if cursor.Start.Row > s.row {
+			cursor.Start.Row++
+			cursor.End.Row++
+		} else if cursor.Start.Row == s.row && cursor.Start.Column >= s.column {
+			cursor.Start.Column -= s.column
+			cursor.End.Column -= s.column
+			cursor.Start.Row++
+			cursor.End.Row++
+		}
+	}
 }
 
-func (s split) Undo(editor *Editor, cursor *Range) {
-	line1 := editor.Buffer.GetLine(cursor.Start.Row - 1)
-	line2 := editor.Buffer.GetLine(cursor.Start.Row)
+func (s *singleSplit) Undo(editor *Editor) {
+	restoreCursors(s.originalCursors)
 
-	editor.Buffer.ChangeLine(cursor.Start.Row - 1, line1 + line2)
-	editor.Buffer.RemoveLine(cursor.Start.Row)
+	line1 := editor.Buffer.GetLine(s.row)
+	line2 := editor.Buffer.GetLine(s.row+1)
 
-	*cursor = s.originalCursors[cursor]
+	editor.Buffer.ChangeLine(s.row, line1 + line2)
+	editor.Buffer.RemoveLine(s.row+1)
 }
 
-func (s split) Name() string {
+func (s *singleSplit) Name() string {
+	return "Single Split"
+}
+
+func copyCursors(editor *Editor, dest map[*Range]Range) {
+	for _, cursor := range editor.Cursors {
+		dest[cursor] = *cursor
+	}
+}
+
+func restoreCursors(src map[*Range]Range) {
+	for cursor, originalValue := range src {
+		*cursor = originalValue
+	}
+}
+
+type split struct {
+	singleSplits map[*Range]*singleSplit
+}
+func Split() *split {
+	return &split{make(map[*Range]*singleSplit)}
+}
+
+func (s *split) Do(editor *Editor, cursor *Range) {
+	singleSplit := SingleSplit(cursor.Start.Row, cursor.Start.Column)
+	s.singleSplits[cursor] = singleSplit
+	singleSplit.Do(editor)
+}
+
+func (s *split) Undo(editor *Editor, cursor *Range) {
+	s.singleSplits[cursor].Undo(editor)
+}
+
+func (s *split) Name() string {
 	return "Split"
+}
+
+// Used by insertInLine
+type singleInsertInLine struct {
+	originalCursors map[*Range]Range
+	originalLine    string
+	insertion       string
+	row             int
+	column          int
+}
+
+func SingleInsertInLine(insertion string, row, column int) *singleInsertInLine {
+	return &singleInsertInLine{make(map[*Range]Range),"", insertion, row, column}
+}
+
+func (s *singleInsertInLine) Do(editor *Editor) {
+	copyCursors(editor, s.originalCursors)
+
+	line := editor.Buffer.GetLine(s.row)
+	s.originalLine = line
+
+	lineIndex := LocationToLineIndex(editor, Location{s.row, s.column})
+
+	newLine := line[:lineIndex] + s.insertion + line[lineIndex:]
+
+	editor.Buffer.ChangeLine(s.row, newLine)
+
+	insertedColumns := StringColumnSpan(editor, s.insertion)
+
+	for _, cursor := range editor.Cursors {
+		if cursor.Start.Row == s.row && cursor.Start.Column >= s.column {
+			cursor.Start.Column += insertedColumns
+		}
+		if cursor.End.Row == s.row && cursor.End.Column >= s.column {
+			cursor.End.Column += insertedColumns
+		}
+	}
+}
+
+func (s *singleInsertInLine) Undo(editor *Editor) {
+	editor.Buffer.ChangeLine(s.row, s.originalLine)
+	restoreCursors(s.originalCursors)
+}
+
+func (s *singleInsertInLine) Name() string {
+	return "Single Insert In Line"
 }
 
 // Used by insert
 type insertInLine struct {
-	originalCursors map[*Range]Range
-	originalLines   map[*Range]string
-	insertion       string
+	singleInsertInLines map[*Range]*singleInsertInLine
+	insertion           string
 }
 
-func InsertInLine(insertion string) insertInLine {
-	return insertInLine{
-		make(map[*Range]Range), 
-		make(map[*Range]string),
+func InsertInLine(insertion string) *insertInLine {
+	return &insertInLine{
+		make(map[*Range]*singleInsertInLine),
 		insertion,
 	}
 }
 
-func (s insertInLine) Do(editor *Editor, cursor *Range) {
-	s.originalCursors[cursor] = *cursor
-	
-	line := editor.Buffer.GetLine(cursor.Start.Row)
-	s.originalLines[cursor] = line
-
-	lineIndex := LocationToLineIndex(editor, cursor.Start)
-
-	newLine := line[:lineIndex] + s.insertion + line[lineIndex:]
-
-	editor.Buffer.ChangeLine(cursor.Start.Row, newLine)
-
-	newCursorStart := cursor.Start
-	newCursorStart.Column += StringColumnSpan(editor, s.insertion)
-	newCursorEnd := newCursorStart
-	newCursorEnd.Column += 1
-
-	cursor.Start = newCursorStart
-	cursor.End = newCursorEnd
+func (s *insertInLine) Do(editor *Editor, cursor *Range) {
+	singleInsertInLine := SingleInsertInLine(s.insertion, cursor.Start.Row, cursor.Start.Column)
+	s.singleInsertInLines[cursor] = singleInsertInLine
+	singleInsertInLine.Do(editor)
 }
 
-func (s insertInLine) Undo(editor *Editor, cursor *Range) {
-	editor.Buffer.ChangeLine(cursor.Start.Row, s.originalLines[cursor])
-	*cursor = s.originalCursors[cursor]
+func (s *insertInLine) Undo(editor *Editor, cursor *Range) {
+	s.singleInsertInLines[cursor].Undo(editor)
 }
 
-func (s insertInLine) Name() string {
+func (s *insertInLine) Name() string {
 	return "Insert In Line"
 }
 
@@ -161,7 +234,7 @@ type insert struct {
 	edits []CursorEdit
 }
 
-func Insert(insertion string) insert {
+func Insert(insertion string) *insert {
 	edits := []CursorEdit{}
 	for i, line := range strings.Split(insertion, "\n") {
 		if i > 0 {
@@ -169,81 +242,143 @@ func Insert(insertion string) insert {
 		}
 		edits = append(edits, InsertInLine(line))
 	}
-	return insert{edits}
+	return &insert{edits}
 }
 
-func (s insert) Do(editor *Editor, cursor *Range) {
+func (s *insert) Do(editor *Editor, cursor *Range) {
 	for _, edit := range s.edits {
 		edit.Do(editor, cursor)
 	}
 }
 
-func (s insert) Undo(editor *Editor, cursor *Range) {
+func (s *insert) Undo(editor *Editor, cursor *Range) {
 	for i := len(s.edits) - 1; i >= 0; i-- {
 		s.edits[i].Undo(editor, cursor)
 	}
 }
 
-func (s insert) Name() string {
+func (s *insert) Name() string {
 	return "Insert"
 }
 
-type delete struct {
+type singleDelete struct {
+	area          Range
+	originalLines   []string
 	originalCursors map[*Range]Range
-	originalLines map[*Range][]string
 }
 
-func Delete() delete {
-	return delete{make(map[*Range]Range), make(map[*Range][]string)}
+func SingleDelete(_range Range) *singleDelete {
+	return &singleDelete{_range, nil, make(map[*Range]Range)}
 }
 
-func (d delete) Do(editor *Editor, cursor *Range) {
-	d.originalCursors[cursor] = *cursor
+func (s *singleDelete) Do(editor *Editor) {
+	copyCursors(editor, s.originalCursors)
 
-	cursorIncludeNewline(editor, cursor)
+	area := s.area
 
-	originalLines := []string{editor.Buffer.GetLine(cursor.Start.Row)}
+	cursorIncludeNewline(editor, &area)
 
-	for lineNumber := cursor.Start.Row + 1; lineNumber <= cursor.End.Row; lineNumber++ {
+	originalLines := []string{editor.Buffer.GetLine(area.Start.Row)}
+
+	for lineNumber := area.Start.Row + 1; lineNumber <= area.End.Row; lineNumber++ {
 		originalLines = append(originalLines, editor.Buffer.GetLine(lineNumber))
 	}
 
-	d.originalLines[cursor] = originalLines
+	s.originalLines = originalLines
 
-	cursorStartIndex := LocationToLineIndex(editor, cursor.Start)
-	cursorEndIndex := LocationToLineIndex(editor, cursor.End)
+	cursorStartIndex := LocationToLineIndex(editor, area.Start)
+	cursorEndIndex := LocationToLineIndex(editor, area.End)
 
 	newLine := 
-		originalLines[0][:cursorStartIndex] +
-		originalLines[len(originalLines)-1][cursorEndIndex:]
+		slice(originalLines[0], 0, cursorStartIndex) +
+		slice(originalLines[len(originalLines)-1], cursorEndIndex, -1)
 
-	for lineNumber := cursor.End.Row; lineNumber >= cursor.Start.Row + 1; lineNumber-- {
+	for lineNumber := area.End.Row; lineNumber >= area.Start.Row + 1; lineNumber-- {
 		// NOTE: This is very inneficient, as all lines are relocated after
 		// every delete
 		editor.Buffer.RemoveLine(lineNumber)
 	}
-	editor.Buffer.ChangeLine(cursor.Start.Row, newLine)
+	editor.Buffer.ChangeLine(area.Start.Row, newLine)
 
-	cursor.End.Row = cursor.Start.Row
-	cursor.End.Column = cursor.Start.Column+1
+	// The amount of deleted columns on the last line
+	var deletedColumns int
+	if area.Start.Row == area.End.Row {
+		deletedColumns = area.End.Column - area.Start.Column
+	} else {
+		deletedColumns = area.End.Column
+	}
+	deletedRows := area.End.Row - area.Start.Row
+
+	for _, cursor := range editor.Cursors {
+		if cursor.Start.Row == area.End.Row && cursor.Start.Column > area.End.Column {
+			cursor.Start.Column -= deletedColumns
+		}
+		if cursor.End.Row == area.End.Row && cursor.Start.Column >= area.End.Column {
+			cursor.End.Column -= deletedColumns
+		}
+		if cursor.Start.Row >= area.End.Row {
+			cursor.Start.Row -= deletedRows
+			cursor.End.Row -= deletedRows
+		}
+	}
 }
 
-func (d delete) Undo(editor *Editor, cursor *Range) {
-	editor.Buffer.ChangeLine(cursor.Start.Row, d.originalLines[cursor][0])
+func slice(str string, start, end int) string {
+	if end > len(str) || end < 0 {
+		end = len(str)
+	}
+	if start > len(str) - 1 {
+		return ""
+	}
+	return str[start:end]
+}
 
-	lineNumber := cursor.Start.Row + 1
+func (s *singleDelete) Undo(editor *Editor) {
+	editor.Buffer.ChangeLine(s.area.Start.Row, s.originalLines[0])
+
+	lineNumber := s.area.Start.Row + 1
 	i := 1
 
-	for i < len(d.originalLines[cursor]) {
-		editor.Buffer.AddLine(lineNumber, d.originalLines[cursor][i])
+	for i < len(s.originalLines) {
+		editor.Buffer.AddLine(lineNumber, s.originalLines[i])
 		lineNumber++
 		i++
 	}
 
+	restoreCursors(s.originalCursors)
+}
+
+func (s *singleDelete) Name() string {
+	return "Single Delete"
+}
+
+
+type _delete struct {
+	singleDeletes   map[*Range]*singleDelete
+	originalCursors map[*Range]Range
+}
+
+func Delete() *_delete {
+	return &_delete{make(map[*Range]*singleDelete), make(map[*Range]Range)}
+}
+
+func (d *_delete) Do(editor *Editor, cursor *Range) {
+	singleDelete := SingleDelete(*cursor)
+
+	d.singleDeletes[cursor] = singleDelete
+	d.originalCursors[cursor] = *cursor
+
+	singleDelete.Do(editor)
+	cursor.End.Row = cursor.Start.Row
+	cursor.End.Column = cursor.Start.Column + 1
+}
+
+func (d *_delete) Undo(editor *Editor, cursor *Range) {
+	d.singleDeletes[cursor].Undo(editor)
 	*cursor = d.originalCursors[cursor]
 }
 
-func (d delete) Name() string {
+func (d *_delete) Name() string {
 	return "Delete"
 }
 

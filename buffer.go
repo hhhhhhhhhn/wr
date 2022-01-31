@@ -22,3 +22,7 @@ func (b *Buffer) ChangeLine(index int, line string) {
 func (b *Buffer) GetLine(index int) string {
 	return b.Lines[index]
 }
+
+func (b *Buffer) GetLength() int {
+	return len(b.Lines)
+}

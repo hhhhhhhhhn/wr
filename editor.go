@@ -104,7 +104,7 @@ func StringColumnSpan(editor *Editor, str string) int {
 		}
 		index++
 	}
-	return index
+	return column
 }
 
 func SortCursors(cursors []*Range) (sortedCursors []*Range) {

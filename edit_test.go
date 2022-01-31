@@ -87,7 +87,13 @@ func TestInsertInLine(t *testing.T) {
 
 	expected := []string{"0000", "11!\t!11", "222!\t!2", "3333"}
 
+	expectedCursors := []*Range{
+		{Location{1,8},Location{1,9}},
+		{Location{2,9},Location{2,10}},
+	}
+
 	assert.Equal(t, expected, e.Buffer.Lines)
+	assert.Equal(t, expectedCursors, e.Cursors)
 
 	e.Undo()
 	PrintEditor(&e)

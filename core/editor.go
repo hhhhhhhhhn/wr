@@ -33,11 +33,11 @@ func (e *Editor) Do(edit Edit) {
 
 func (e *Editor) Undo() {
 	for {
-		if e.HistoryIndex == 0 {
+		e.HistoryIndex--
+		if e.HistoryIndex < 0 {
 			e.Redo()
 			break
 		}
-		e.HistoryIndex--
 		e.History[e.HistoryIndex].Undo(e)
 		if e.History[e.HistoryIndex].Name() == "Undo Marker" {
 			break
@@ -47,14 +47,14 @@ func (e *Editor) Undo() {
 
 func (e *Editor) Redo() {
 	for {
-		if e.HistoryIndex == len(e.History) - 1 {
+		e.HistoryIndex++
+		if e.HistoryIndex > len(e.History) - 1 {
 			break
 		}
 		e.History[e.HistoryIndex].Do(e)
 		if e.History[e.HistoryIndex].Name() == "Undo Marker" {
 			break
 		}
-		e.HistoryIndex++
 	}
 }
 

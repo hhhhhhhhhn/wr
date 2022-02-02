@@ -32,6 +32,30 @@ func TestSplit(t *testing.T) {
 	assert.Equal(t, linesCopy, e.Buffer.Lines)
 }
 
+func TestSplitOOBMultiline(t *testing.T) {
+	lines := []string{"0000", "1111", "2222", "3333"}
+	linesCopy := make([]string, len(lines))
+	copy(linesCopy, lines)
+
+	b := Buffer{Lines: lines}
+	e := Editor{Buffer: &b}
+
+	e.Do(
+		UndoMarker(),
+	)
+	e.Do(
+		PushCursor(&Range{Location{1,1},Location{2,2}}),
+	)
+	e.CursorDo(Split())
+
+	expected := []string{"0000", "1", "111", "2222", "3333"}
+
+	assert.Equal(t, expected, e.Buffer.Lines)
+
+	e.Undo()
+	assert.Equal(t, linesCopy, e.Buffer.Lines)
+}
+
 func TestSplitOOB(t *testing.T) {
 	lines := []string{"0000", "1111", "2222", "3333"}
 	linesCopy := make([]string, len(lines))

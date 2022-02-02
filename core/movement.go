@@ -26,7 +26,7 @@ type removeCursor struct {
 }
 
 func RemoveCursor(cursor *Range) *removeCursor {
-	return &removeCursor{removedCursor: cursor}
+	return &removeCursor{removedCursor: cursor, originalCursors: []*Range{}}
 }
 
 func (r *removeCursor) Do(e *Editor) {

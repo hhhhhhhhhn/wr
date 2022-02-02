@@ -19,7 +19,6 @@ func main() {
 	editor.Do(
 		core.PushCursor(&core.Range{core.Location{0, 0}, core.Location{0, 1}}),
 	)
-	editor.Do(core.UndoMarker())
 
 	in := bufio.NewReader(os.Stdin)
 

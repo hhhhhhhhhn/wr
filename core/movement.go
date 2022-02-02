@@ -102,5 +102,59 @@ func (m *moveRows) Undo(editor *Editor, cursor *Range) {
 }
 
 func (m *moveRows) Name() string {
-	return "Move Columns"
+	return "Move Rows"
+}
+
+type moveChars struct {
+	chars           int
+	originalCursors map[*Range]Range
+}
+
+func MoveChars(chars int) *moveChars {
+	return &moveChars{chars, make(map[*Range]Range)}
+}
+
+func (m *moveChars) Do(editor *Editor, cursor *Range) {
+	m.originalCursors[cursor] = *cursor
+
+	line := editor.Buffer.GetLine(cursor.Start.Row)
+	lineIndex := LocationToLineIndex(editor, cursor.Start)
+	lineIndex += m.chars
+
+	if lineIndex < 0 {
+		cursor.Start.Row--
+		// Prevents crash
+		if cursor.Start.Row >= 0 {
+			line = editor.Buffer.GetLine(cursor.Start.Row)
+		} else {
+			line = ""
+		}
+		col := StringColumnSpan(editor, line)
+		cursor.Start.Column = col
+		cursor.End.Row = cursor.Start.Row
+		cursor.End.Column = col + 1
+		return
+	}
+
+	if lineIndex >= len(line) + 1 {
+		cursor.Start.Row++
+		cursor.End.Row = cursor.Start.Row
+		cursor.Start.Column = 0
+		cursor.End.Column = 1
+		return
+	}
+
+	col := LineIndexToColumn(editor, lineIndex, line)
+
+	cursor.End.Row = cursor.Start.Row
+	cursor.Start.Column = col
+	cursor.End.Column = col + 1
+}
+
+func (m *moveChars) Undo(editor *Editor, cursor *Range) {
+	*cursor = m.originalCursors[cursor]
+}
+
+func (m *moveChars) Name() string {
+	return "Move Chars"
 }

@@ -63,3 +63,13 @@ func TestUndo(t *testing.T) {
 	e.Undo()
 	assert.Equal(t, linesCopy, e.Buffer.Lines)
 }
+
+func TestRedo(t *testing.T) {
+	b := Buffer{Lines: []string{"0000", "1111", "2222", "3333"}}
+	e := Editor{Buffer: &b}
+	e.Redo()
+	e.Redo()
+	e.Redo()
+	e.Redo()
+	e.CursorDo(Split())
+}

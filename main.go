@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 	"unicode"
@@ -11,10 +12,11 @@ import (
 )
 
 var scroll = 0
+var out = bufio.NewWriterSize(os.Stdout, 4096)
 
 func main() {
 	editor := core.Editor{Buffer: &core.Buffer{Lines: []string{"aaaa", "bbbb", "cccc"}}}
-	renderer := hexes.New(os.Stdin, os.Stdout)
+	renderer := hexes.New(os.Stdin, out)
 	renderer.Start()
 	editor.Do(
 		core.PushCursor(&core.Range{core.Location{0, 0}, core.Location{0, 1}}),
@@ -23,14 +25,21 @@ func main() {
 	in := bufio.NewReader(os.Stdin)
 
 	PrintEditor(&editor, renderer)
+
 	for {
 		chr, _, _ := in.ReadRune()
 		switch(chr) {
-		case 'h':
+		case 'H':
 			editor.CursorDo(core.MoveColumns(-1))
 			break
-		case 'l':
+		case 'L':
 			editor.CursorDo(core.MoveColumns(1))
+			break
+		case 'h':
+			editor.CursorDo(core.MoveChars(-1))
+			break
+		case 'l':
+			editor.CursorDo(core.MoveChars(1))
 			break
 		case 'j':
 			editor.CursorDo(core.MoveRows(1))
@@ -47,9 +56,15 @@ func main() {
 		case 'r':
 			editor.Redo()
 			break
+		case 127: // Backspace
+			editor.CursorDo(core.MoveChars(-1))
+			editor.CursorDo(core.Delete())
+			break
 		default:
-			if unicode.IsGraphic(chr) {
+			if unicode.IsGraphic(chr) || chr == '\t' || chr == '\n' {
 				editor.CursorDo(core.Insert(string(chr)))
+			} else {
+				editor.CursorDo(core.Insert(fmt.Sprint(chr)))
 			}
 			break
 		}
@@ -60,7 +75,8 @@ func main() {
 func PrintEditor(e *core.Editor, r *hexes.Renderer) {
 	lineAmount := e.Buffer.GetLength()
 
-	for row := scroll; row < scroll + r.Rows && row < lineAmount; row++ {
+	var row int
+	for row = scroll; row < scroll + r.Rows && row < lineAmount; row++ {
 		line := strings.ReplaceAll(e.Buffer.GetLine(row), "\t", strings.Repeat(" ", e.Config.Tabsize))
 		line += strings.Repeat(" ", r.Cols - len(line))
 		
@@ -75,6 +91,12 @@ func PrintEditor(e *core.Editor, r *hexes.Renderer) {
 			col++
 		}
 	}
+
+	for ;row < r.Rows; row++ {
+		r.SetString(row, 0, strings.Repeat(" ", r.Cols))
+	}
+
+	out.Flush()
 }
 
 func isWithinCursor(e *core.Editor, row, col int) bool {

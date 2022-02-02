@@ -49,6 +49,7 @@ func (e *Editor) Redo() {
 	for {
 		e.HistoryIndex++
 		if e.HistoryIndex > len(e.History) - 1 {
+			e.HistoryIndex = len(e.History)
 			break
 		}
 		e.History[e.HistoryIndex].Do(e)
@@ -81,8 +82,8 @@ func LocationToLineIndex(editor *Editor, location Location) int {
 func LineIndexToColumn(editor *Editor, index int, line string) int {
 	i := 0
 	column := 0
-	for i < index && i < len(line){
-		switch(line[index]) {
+	for i < index && i < len(line) {
+		switch(line[i]) {
 		case '\t':
 			column += editor.Config.Tabsize
 		default:

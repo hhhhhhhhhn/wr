@@ -34,6 +34,10 @@ var cursorEdits = []CursorEdit{
 	MoveRows(10),
 	MoveRows(-1),
 	MoveRows(-10),
+	MoveChars(1),
+	MoveChars(-1),
+	MoveChars(100),
+	MoveChars(-100),
 }
 
 func TestScenarios(t *testing.T) {

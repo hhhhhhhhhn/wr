@@ -34,6 +34,7 @@ func (e *Editor) Do(edit Edit) {
 func (e *Editor) Undo() {
 	for {
 		if e.HistoryIndex == 0 {
+			e.Redo()
 			break
 		}
 		e.HistoryIndex--
@@ -65,7 +66,7 @@ func LocationToLineIndex(editor *Editor, location Location) int {
 	index :=  0
 	column := 0
 	line := editor.Buffer.GetLine(location.Row)
-	for column < location.Column {
+	for column < location.Column && index < len(line) {
 		switch(line[index]) {
 		case '\t':
 			column += editor.Config.Tabsize
@@ -80,7 +81,7 @@ func LocationToLineIndex(editor *Editor, location Location) int {
 func LineIndexToColumn(editor *Editor, index int, line string) int {
 	i := 0
 	column := 0
-	for i < index {
+	for i < index && i < len(line){
 		switch(line[index]) {
 		case '\t':
 			column += editor.Config.Tabsize

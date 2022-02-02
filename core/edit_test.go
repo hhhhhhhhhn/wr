@@ -32,6 +32,33 @@ func TestSplit(t *testing.T) {
 	assert.Equal(t, linesCopy, e.Buffer.Lines)
 }
 
+func TestSplitOOB(t *testing.T) {
+	lines := []string{"0000", "1111", "2222", "3333"}
+	linesCopy := make([]string, len(lines))
+	copy(linesCopy, lines)
+
+	b := Buffer{Lines: lines}
+	e := Editor{Buffer: &b}
+
+	e.Do(
+		UndoMarker(),
+	)
+	e.Do(
+		PushCursor(&Range{Location{1,100},Location{1,200}}),
+	)
+	e.Do(
+		PushCursor(&Range{Location{2,300},Location{2,400}}),
+	)
+	e.CursorDo(Split())
+
+	expected := []string{"0000", "1111", "", "2222", "", "3333"}
+
+	assert.Equal(t, expected, e.Buffer.Lines)
+
+	e.Undo()
+	assert.Equal(t, linesCopy, e.Buffer.Lines)
+}
+
 func TestSingleInsertInLine(t *testing.T) {
 	lines := []string{"0000", "1111", "2222", "3333"}
 	linesCopy := make([]string, len(lines))
@@ -110,6 +137,33 @@ func TestInsert(t *testing.T) {
 	e.CursorDo(Insert("!\n!"))
 
 	expected := []string{"0000", "11!", "!11", "222!", "!2", "3333"}
+
+	assert.Equal(t, expected, e.Buffer.Lines)
+
+	e.Undo()
+	assert.Equal(t, linesCopy, e.Buffer.Lines)
+
+}
+func TestInsertOOB(t *testing.T) {
+	lines := []string{"0000", "1111", "2222", "3333"}
+	linesCopy := make([]string, len(lines))
+	copy(linesCopy, lines)
+
+	b := Buffer{Lines: lines}
+	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+
+	e.Do(
+		UndoMarker(),
+	)
+	e.Do(
+		PushCursor(&Range{Location{1,100},Location{1,100}}),
+	)
+	e.Do(
+		PushCursor(&Range{Location{2,100},Location{2,100}}),
+	)
+	e.CursorDo(Insert("!\n!"))
+
+	expected := []string{"0000", "1111!", "!", "2222!", "!", "3333"}
 
 	assert.Equal(t, expected, e.Buffer.Lines)
 
@@ -277,6 +331,30 @@ func TestDeleteJoinLines(t *testing.T) {
 	)
 	e.Do(
 		PushCursor(&Range{Location{1,4},Location{2,5}}),
+	)
+	e.CursorDo(Delete())
+
+	expected := []string{"0000", "11113333"}
+
+	assert.Equal(t, expected, e.Buffer.Lines)
+
+	e.Undo()
+	assert.Equal(t, linesCopy, e.Buffer.Lines)
+}
+
+func TestDeleteOOB(t *testing.T) {
+	lines := []string{"0000", "1111", "2222", "3333"}
+	linesCopy := make([]string, len(lines))
+	copy(linesCopy, lines)
+
+	b := Buffer{Lines: lines}
+	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+
+	e.Do(
+		UndoMarker(),
+	)
+	e.Do(
+		PushCursor(&Range{Location{1,100},Location{2,5}}),
 	)
 	e.CursorDo(Delete())
 

@@ -7,7 +7,6 @@ type Edit interface {
 	Undo(editor *Editor)
 	Name() string
 }
-
 // Structs in lower and Constructurs in upper
 type undoMarker struct {}
 
@@ -19,34 +18,15 @@ func (u *undoMarker) Do(*Editor) {}
 func (u *undoMarker) Undo(*Editor) {}
 func (u *undoMarker) Name() string { return "Undo Marker" }
 
-type pushCursor struct {
-	_range *Range
-}
-
-func PushCursor(_range *Range) *pushCursor {
-	return &pushCursor{_range}
-}
-
-func (p *pushCursor) Do(e *Editor) {
-	e.Cursors = append(e.Cursors, p._range)
-}
-
-func (p *pushCursor) Undo(e *Editor) {
-	e.Cursors = e.Cursors[:len(e.Cursors) - 1]
-}
-
-func (p *pushCursor) Name() string {
-	return "Push Cursor"
-}
-
 // Used internally, for converting cursorEdits into Edits
 type cursorEditWrapper struct {
 	cursorEdit    CursorEdit
 	sortedCursors []*Range
+	removeCursors []*removeCursor
 }
 
 func wrapCursorEdit(cursorEdit CursorEdit) *cursorEditWrapper {
-	return &cursorEditWrapper{cursorEdit, nil}
+	return &cursorEditWrapper{cursorEdit, nil, nil}
 }
 
 func (c *cursorEditWrapper) Do(e *Editor) {
@@ -57,12 +37,30 @@ func (c *cursorEditWrapper) Do(e *Editor) {
 	for i := len(c.sortedCursors) - 1; i >= 0; i-- {
 		c.cursorEdit.Do(e, c.sortedCursors[i])
 	}
+
+	lastRow := e.Buffer.GetLength() - 1
+	for _, cursor := range e.Cursors {
+		if cursor.Start.Row < 0 ||
+			cursor.End.Row < 0 ||
+			cursor.Start.Row > lastRow ||
+			cursor.End.Row > lastRow {
+				removeCursor := RemoveCursor(cursor)
+				removeCursor.Do(e)
+				c.removeCursors = append(c.removeCursors, removeCursor)
+			}
+	}
 }
 
 func (c *cursorEditWrapper) Undo(e *Editor) {
+	for i := len(c.removeCursors) - 1; i >= 0; i-- {
+		c.removeCursors[i].Undo(e)
+	}
+
 	for _, cursor := range c.sortedCursors {
 		c.cursorEdit.Undo(e, cursor)
 	}
+
+	c.removeCursors = nil
 }
 
 func (c *cursorEditWrapper) Name() string {
@@ -391,6 +389,9 @@ func cursorIncludeNewline(editor *Editor, cursor *Range) {
 		cursor.End.Row++
 		cursor.End.Column = 0
 	}
+	if !isInBounds(editor, cursor.Start) {
+		cursor.Start.Column = StringColumnSpan(editor, editor.Buffer.GetLine(cursor.Start.Row))
+	}
 }
 
 func isInBounds(editor *Editor, location Location) bool {
@@ -400,7 +401,7 @@ func isInBounds(editor *Editor, location Location) bool {
 
 	location.Column--
 	line := editor.Buffer.GetLine(location.Row)
-	if StringColumnSpan(editor, line) == location.Column {
+	if location.Column >= StringColumnSpan(editor, line) {
 		return false
 	}
 	return true

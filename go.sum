@@ -2,6 +2,14 @@ github.com/davecgh/go-spew v1.1.0 h1:ZDRjVQ15GmhC3fiQ8ni8+OwkZQO4DARzQgrnXU1Liz8
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/hhhhhhhhhn/hexes v0.0.0-20220201150205-c38b3c066e19 h1:820bMjGLtwSqCC/vd4+pH/9RZzJe6EApCtIOA9qcD1A=
 github.com/hhhhhhhhhn/hexes v0.0.0-20220201150205-c38b3c066e19/go.mod h1:L5Ad2LxElcOynO4Ht/+DSERu+wgbsFXGU8RwkXw+y34=
+github.com/hhhhhhhhhn/hexes v0.0.0-20220203185325-5b601c3caac4 h1:Bxj+FgPPKBA6AZSFck0dJFGcmBXguevxNwb/F6xTJPQ=
+github.com/hhhhhhhhhn/hexes v0.0.0-20220203185325-5b601c3caac4/go.mod h1:fJEW4RAf8rhxKHcmUbCQJNOAGGNgXzeVLg/NVXdSBqM=
+github.com/hhhhhhhhhn/hexes v0.1.0 h1:SgkSHHIUXCGJvhQQXcz1pPf5Y9T5vd2f4q0H9rtrnI0=
+github.com/hhhhhhhhhn/hexes v0.1.0/go.mod h1:fJEW4RAf8rhxKHcmUbCQJNOAGGNgXzeVLg/NVXdSBqM=
+github.com/hhhhhhhhhn/hexes v0.1.1 h1:a4lIsMDrQ4ahHhupPSpuTyXZbWjTdgx37ApeDcrAuPU=
+github.com/hhhhhhhhhn/hexes v0.1.1/go.mod h1:fJEW4RAf8rhxKHcmUbCQJNOAGGNgXzeVLg/NVXdSBqM=
+github.com/hhhhhhhhhn/hexes v0.1.2 h1:IKCtKCOabMnvR3HP2ww0mD9QFKBcxRcMUhCdaAGs0I0=
+github.com/hhhhhhhhhn/hexes v0.1.2/go.mod h1:fJEW4RAf8rhxKHcmUbCQJNOAGGNgXzeVLg/NVXdSBqM=
 github.com/mattn/go-runewidth v0.0.13 h1:lTGmDsbAYt5DmK6OnoV7EuIF1wEIFAcxld6ypU4OSgU=
 github.com/mattn/go-runewidth v0.0.13/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

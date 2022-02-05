@@ -56,6 +56,9 @@ func main() {
 		case 'r':
 			editor.Redo()
 			break
+		case 'R':
+			renderer.Refresh()
+			break
 		case 127: // Backspace
 			editor.CursorDo(core.MoveChars(-1))
 			editor.CursorDo(core.Delete())
@@ -78,8 +81,8 @@ func PrintEditor(e *core.Editor, r *hexes.Renderer) {
 	var row int
 	for row = scroll; row < scroll + r.Rows && row < lineAmount; row++ {
 		line := strings.ReplaceAll(e.Buffer.GetLine(row), "\t", strings.Repeat(" ", e.Config.Tabsize))
-		line += strings.Repeat(" ", r.Cols - len(line))
-		
+		line += strings.Repeat(" ", r.Cols - core.StringColumnSpan(e, line))
+
 		col := 0
 		for _, chr := range line {
 			if isWithinCursor(e, row, col) {

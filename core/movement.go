@@ -127,9 +127,9 @@ func (m *moveChars) Do(editor *Editor, cursor *Range) {
 	}
 
 	cursorChrIndex := -1
-	for _, chrCol := range cols {
-		if chrCol >= cursor.Start.Column {
-			cursorChrIndex = chrCol
+	for i, chrCol := range cols {
+		if chrCol > cursor.Start.Column {
+			cursorChrIndex = i-1
 			break
 		}
 	}

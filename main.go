@@ -88,7 +88,7 @@ func PrintEditor(e *core.Editor, r *hexes.Renderer) {
 				r.SetAttribute(r.DefaultAttribute)
 			}
 			r.SetString(row, col, string(chr))
-			col++
+			col += core.RuneWidth(e, chr)
 		}
 	}
 

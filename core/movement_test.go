@@ -140,3 +140,56 @@ func TestMoveCharsMultibyte(t *testing.T) {
 	e.Undo()
 	assert.Equal(t, linesCopy, e.Buffer.Lines)
 }
+
+func TestMoveCharsWide(t *testing.T) {
+	lines := []string{"0000", "11ｏ11", "2222", "3333"}
+	linesCopy := make([]string, len(lines))
+	copy(linesCopy, lines)
+
+	b := Buffer{Lines: lines}
+	e := Editor{Buffer: &b}
+
+	e.Do(
+		UndoMarker(),
+	)
+	e.Do(
+		PushCursor(&Range{Location{1,2},Location{1,3}}),
+	)
+	e.CursorDo(MoveChars(1))
+	e.CursorDo(Insert("!"))
+	e.CursorDo(MoveChars(-2))
+	e.CursorDo(Insert("!"))
+
+	expected := []string{"0000", "11!ｏ!11", "2222", "3333"}
+
+	assert.Equal(t, expected, e.Buffer.Lines)
+
+	e.Undo()
+	assert.Equal(t, linesCopy, e.Buffer.Lines)
+}
+
+func TestMoveCharsWideMiddle(t *testing.T) {
+	lines := []string{"0000", "1111", "22学22", "3333"}
+	linesCopy := make([]string, len(lines))
+	copy(linesCopy, lines)
+
+	b := Buffer{Lines: lines}
+	e := Editor{Buffer: &b}
+
+	e.Do(
+		UndoMarker(),
+	)
+	e.Do(
+		PushCursor(&Range{Location{1,3},Location{1,4}}),
+	)
+	e.CursorDo(MoveRows(1))
+	e.CursorDo(MoveChars(1))
+	e.CursorDo(Insert("!"))
+
+	expected := []string{"0000", "1111", "22学!22", "3333"}
+
+	assert.Equal(t, expected, e.Buffer.Lines)
+
+	e.Undo()
+	assert.Equal(t, linesCopy, e.Buffer.Lines)
+}

@@ -15,7 +15,7 @@ var scroll = 0
 var out = bufio.NewWriterSize(os.Stdout, 4096)
 
 func main() {
-	editor := core.Editor{Buffer: &core.Buffer{Lines: []string{"aaaa", "bbbb", "cccc"}}}
+	editor := core.Editor{Buffer: &core.Buffer{Lines: []string{"aaaa", "bbbb", "cccc"}}, Config: core.EditorConfig{Tabsize: 4}}
 	renderer := hexes.New(os.Stdin, out)
 	renderer.Start()
 	editor.Do(

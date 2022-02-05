@@ -87,7 +87,7 @@ func (s *singleSplit) Do(editor *Editor) {
 	copyCursors(editor, s.originalCursors)
 
 	line := editor.Buffer.GetLine(s.row)
-	lineIndex := LocationToLineIndex(editor, Location{s.row, s.column})
+	lineIndex := LocationToByteIndex(editor, Location{s.row, s.column})
 
 	line1 := line[:lineIndex]
 	line2 := line[lineIndex:]
@@ -174,7 +174,7 @@ func (s *singleInsertInLine) Do(editor *Editor) {
 	line := editor.Buffer.GetLine(s.row)
 	s.originalLine = line
 
-	lineIndex := LocationToLineIndex(editor, Location{s.row, s.column})
+	lineIndex := LocationToByteIndex(editor, Location{s.row, s.column})
 
 	newLine := line[:lineIndex] + s.insertion + line[lineIndex:]
 
@@ -284,8 +284,8 @@ func (s *singleDelete) Do(editor *Editor) {
 
 	s.originalLines = originalLines
 
-	cursorStartIndex := LocationToLineIndex(editor, area.Start)
-	cursorEndIndex := LocationToLineIndex(editor, area.End)
+	cursorStartIndex := LocationToByteIndex(editor, area.Start)
+	cursorEndIndex := LocationToByteIndex(editor, area.End)
 
 	newLine := 
 		slice(originalLines[0], 0, cursorStartIndex) +

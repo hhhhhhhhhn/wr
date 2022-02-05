@@ -1,6 +1,9 @@
 package core
 
-import "sort"
+import (
+	"sort"
+	rw "github.com/mattn/go-runewidth"
+)
 
 type Editor struct {
 	Buffer       *Buffer
@@ -63,48 +66,42 @@ func (e *Editor) CursorDo(cursorEdit CursorEdit) {
 	e.Do(wrapCursorEdit(cursorEdit))
 }
 
-func LocationToLineIndex(editor *Editor, location Location) int {
-	index :=  0
-	column := 0
-	line := editor.Buffer.GetLine(location.Row)
-	for column < location.Column && index < len(line) {
-		switch(line[index]) {
-		case '\t':
-			column += editor.Config.Tabsize
-		default:
-			column++
-		}
-		index++
+func RuneWidth(editor *Editor, chr rune) int {
+	switch(chr) {
+	case '\t':
+		return editor.Config.Tabsize
+	default:
+		return rw.RuneWidth(chr)
 	}
-	return index
 }
 
-func LineIndexToColumn(editor *Editor, index int, line string) int {
-	i := 0
+func LocationToByteIndex(editor *Editor, location Location) int {
 	column := 0
-	for i < index && i < len(line) {
-		switch(line[i]) {
-		case '\t':
-			column += editor.Config.Tabsize
-		default:
-			column++
+	line := editor.Buffer.GetLine(location.Row)
+	for i, chr := range line {
+		if column >= location.Column {
+			return i
 		}
-		i++
+		column += RuneWidth(editor, chr)
+	}
+	return len(line)
+}
+
+func ByteIndexToColumn(editor *Editor, index int, line string) int {
+	column := 0
+	for i, chr := range line {
+		if i >= index {
+			break
+		}
+		column += RuneWidth(editor, chr)
 	}
 	return column
 }
 
 func StringColumnSpan(editor *Editor, str string) int {
-	index := 0
 	column := 0
-	for index < len(str) {
-		switch(str[index]) {
-		case '\t':
-			column += editor.Config.Tabsize
-		default:
-			column++
-		}
-		index++
+	for _, chr := range str {
+		column += RuneWidth(editor, chr)
 	}
 	return column
 }

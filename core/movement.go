@@ -118,10 +118,29 @@ func (m *moveChars) Do(editor *Editor, cursor *Range) {
 	m.originalCursors[cursor] = *cursor
 
 	line := editor.Buffer.GetLine(cursor.Start.Row)
-	lineIndex := LocationToLineIndex(editor, cursor.Start)
-	lineIndex += m.chars
 
-	if lineIndex < 0 {
+	// The column in which each character/rune of the line is
+	cols  := []int{0}
+
+	for _, chr := range line {
+		cols = append(cols, cols[len(cols)-1] + RuneWidth(editor, chr))
+	}
+
+	cursorChrIndex := -1
+	for _, chrCol := range cols {
+		if chrCol >= cursor.Start.Column {
+			cursorChrIndex = chrCol
+			break
+		}
+	}
+	if cursorChrIndex == -1 {
+		cursorChrIndex = len(cols) - 1
+	}
+
+	newCursorChrIndex := cursorChrIndex + m.chars
+
+	// Go to the end of the previous line
+	if newCursorChrIndex < 0 {
 		cursor.Start.Row--
 		// Prevents crash
 		if cursor.Start.Row >= 0 {
@@ -136,7 +155,8 @@ func (m *moveChars) Do(editor *Editor, cursor *Range) {
 		return
 	}
 
-	if lineIndex >= len(line) + 1 {
+
+	if newCursorChrIndex >= len(cols) {
 		cursor.Start.Row++
 		cursor.End.Row = cursor.Start.Row
 		cursor.Start.Column = 0
@@ -144,11 +164,9 @@ func (m *moveChars) Do(editor *Editor, cursor *Range) {
 		return
 	}
 
-	col := LineIndexToColumn(editor, lineIndex, line)
-
 	cursor.End.Row = cursor.Start.Row
-	cursor.Start.Column = col
-	cursor.End.Column = col + 1
+	cursor.Start.Column = cols[newCursorChrIndex]
+	cursor.End.Column = cursor.Start.Column + 1
 }
 
 func (m *moveChars) Undo(editor *Editor, cursor *Range) {

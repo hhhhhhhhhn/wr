@@ -13,19 +13,11 @@ import (
 
 var scroll = 0
 var out = bufio.NewWriterSize(os.Stdout, 4096)
+var editor core.Editor
+var in     *bufio.Reader
+var renderer *hexes.Renderer
 
-func main() {
-	editor := core.Editor{Buffer: &core.Buffer{Lines: []string{"aaaa", "bbbb", "cccc"}}, Config: core.EditorConfig{Tabsize: 4}}
-	renderer := hexes.New(os.Stdin, out)
-	renderer.Start()
-	editor.Do(
-		core.PushCursor(&core.Range{core.Location{0, 0}, core.Location{0, 1}}),
-	)
-
-	in := bufio.NewReader(os.Stdin)
-
-	PrintEditor(&editor, renderer)
-
+func normalMode() {
 	for {
 		chr, _, _ := in.ReadRune()
 		switch(chr) {
@@ -47,6 +39,14 @@ func main() {
 		case 'k':
 			editor.CursorDo(core.MoveRows(-1))
 			break
+		case 'J':
+			scroll++
+			break
+		case 'K':
+			if scroll > 0 {
+				scroll--
+			}
+			break
 		case 'u':
 			editor.Do(core.UndoMarker())
 			break
@@ -59,6 +59,28 @@ func main() {
 		case 'R':
 			renderer.Refresh()
 			break
+		case 'd': // Backspace
+			editor.CursorDo(core.Delete())
+			break
+		case 'V':
+			multiCursorMode()
+		case 'i':
+			insertMode()
+			break
+		default:
+			break
+		}
+		PrintEditor(&editor, renderer)
+	}
+}
+
+func insertMode() {
+	editor.Do(core.UndoMarker())
+	for {
+		chr, _, _ := in.ReadRune()
+		switch(chr) {
+		case 'q':
+			return
 		case 127: // Backspace
 			editor.CursorDo(core.MoveChars(-1))
 			editor.CursorDo(core.Delete())
@@ -73,6 +95,73 @@ func main() {
 		}
 		PrintEditor(&editor, renderer)
 	}
+}
+
+func multiCursorMode() {
+	for {
+		chr, _, _ := in.ReadRune()
+		switch(chr) {
+		case 'h':
+			editor.CursorDo(core.MoveColumns(-1))
+			break
+		case 'l':
+			editor.CursorDo(core.MoveColumns(1))
+			break
+		case 'j':
+			editor.Do(core.PushCursorBelow())
+			break
+		case 'k':
+			if len(editor.Cursors) > 1 {
+				editor.Do(core.RemoveCursor(editor.Cursors[len(editor.Cursors) - 1]))
+			}
+			break
+		case 'J':
+			scroll++
+			break
+		case 'K':
+			if scroll > 0 {
+				scroll--
+			}
+			break
+		case 'u':
+			editor.Do(core.UndoMarker())
+			break
+		case 'U':
+			editor.Undo()
+			break
+		case 'r':
+			editor.Redo()
+			break
+		case 'R':
+			renderer.Refresh()
+			break
+		case 'd':
+			editor.CursorDo(core.Delete())
+			break
+		case 'q':
+			return
+		case 'i':
+			insertMode()
+			break
+		default:
+			break
+		}
+		PrintEditor(&editor, renderer)
+	}
+}
+
+func main() {
+	editor = core.Editor{Buffer: &core.Buffer{Lines: []string{"aaaa", "bbbb", "cccc"}}, Config: core.EditorConfig{Tabsize: 4}}
+	renderer = hexes.New(os.Stdin, out)
+	renderer.Start()
+	editor.Do(
+		core.PushCursor(&core.Range{core.Location{0, 0}, core.Location{0, 1}}),
+	)
+
+	in = bufio.NewReader(os.Stdin)
+
+	PrintEditor(&editor, renderer)
+	normalMode()
 }
 
 func PrintEditor(e *core.Editor, r *hexes.Renderer) {
@@ -90,13 +179,13 @@ func PrintEditor(e *core.Editor, r *hexes.Renderer) {
 			} else {
 				r.SetAttribute(r.DefaultAttribute)
 			}
-			r.SetString(row, col, string(chr))
+			r.SetString(row - scroll, col, string(chr))
 			col += core.RuneWidth(e, chr)
 		}
 	}
 
-	for ;row < r.Rows; row++ {
-		r.SetString(row, 0, strings.Repeat(" ", r.Cols))
+	for ;row < scroll + r.Rows; row++ {
+		r.SetString(row - scroll, 0, strings.Repeat(" ", r.Cols))
 	}
 
 	out.Flush()

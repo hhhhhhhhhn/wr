@@ -48,6 +48,38 @@ func (r *removeCursor) Name() string {
 	return "Remove Cursor"
 }
 
+type pushCursorBelow struct {
+	pushCursor *pushCursor
+}
+
+func PushCursorBelow() *pushCursorBelow {
+	return &pushCursorBelow{}
+}
+
+func (p *pushCursorBelow) Do(editor *Editor) {
+	if len(editor.Cursors) > 0 {
+		lastCursor := editor.Cursors[len(editor.Cursors) - 1]
+		if lastCursor.End.Row < editor.Buffer.GetLength() - 1 {
+			rowOffset := lastCursor.End.Row - lastCursor.Start.Row + 1
+			newCursor := &Range{
+				Location{lastCursor.End.Row + rowOffset, lastCursor.Start.Column},
+				Location{lastCursor.End.Row + rowOffset, lastCursor.End.Column},
+			}
+			p.pushCursor = PushCursor(newCursor)
+			p.pushCursor.Do(editor)
+		}
+	}
+}
+
+func (p *pushCursorBelow) Undo(editor *Editor) {
+	if p.pushCursor != nil {
+		p.pushCursor.Undo(editor)
+	}
+}
+
+func (p *pushCursorBelow) Name() string {
+	return "Push Cursor Below"
+}
 
 type moveColumns struct {
 	cols         int
@@ -175,4 +207,47 @@ func (m *moveChars) Undo(editor *Editor, cursor *Range) {
 
 func (m *moveChars) Name() string {
 	return "Move Chars"
+}
+
+type boundToLine struct {
+	originalCursors map[*Range]Range
+}
+
+func BoundToLine() *boundToLine {
+	return &boundToLine{originalCursors: make(map[*Range]Range)}
+}
+
+func (b *boundToLine) Do(editor *Editor, cursor *Range) {
+	b.originalCursors[cursor] = *cursor
+
+	startLine := editor.Buffer.GetLine(cursor.Start.Row)
+	startColumnSpan := StringColumnSpan(editor, startLine)
+
+	var endColumnSpan int
+	if cursor.Start.Row != cursor.End.Row {
+		endLine := editor.Buffer.GetLine(cursor.End.Row)
+		endColumnSpan = StringColumnSpan(editor, endLine)
+	} else {
+		endColumnSpan = startColumnSpan
+	}
+
+	cursor.Start.Column = bound(cursor.Start.Column, 0, startColumnSpan)
+	cursor.End.Column = bound(cursor.End.Column, 0, endColumnSpan + 1)
+}
+
+func (b *boundToLine) Undo(editor *Editor, cursor *Range) {
+	*cursor = b.originalCursors[cursor]
+}
+
+func (b *boundToLine) Name() string {
+	return "Bound To Line"
+}
+
+func bound(value, min, max int) int {
+	if value < min {
+		return min
+	} else if value > max {
+		return max
+	}
+	return value
 }

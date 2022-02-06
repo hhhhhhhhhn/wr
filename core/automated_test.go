@@ -38,6 +38,7 @@ var cursorEdits = []CursorEdit{
 	MoveChars(-1),
 	MoveChars(100),
 	MoveChars(-100),
+	BoundToLine(),
 }
 
 func TestScenarios(t *testing.T) {

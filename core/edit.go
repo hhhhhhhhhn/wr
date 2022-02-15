@@ -386,8 +386,13 @@ func (d *_delete) Name() string {
 // This function simply moves those cursors ends into the start of the next line,
 func cursorIncludeNewline(editor *Editor, cursor *Range) {
 	if !isInBounds(editor, cursor.End) {
-		cursor.End.Row++
-		cursor.End.Column = 0
+		// cursor is on last line
+		if cursor.End.Row >= editor.Buffer.GetLength() - 1 {
+			cursor.End.Column = StringColumnSpan(editor, editor.Buffer.GetLine(cursor.End.Row)) + 1
+		} else {
+			cursor.End.Row++
+			cursor.End.Column = 0
+		}
 	}
 	if !isInBounds(editor, cursor.Start) {
 		cursor.Start.Column = StringColumnSpan(editor, editor.Buffer.GetLine(cursor.Start.Row))

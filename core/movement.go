@@ -111,6 +111,34 @@ func (m *moveColumns) Name() string {
 	return "Move Columns"
 }
 
+type endMoveColumns struct {
+	cols         int
+	originalCursors map[*Range]Range
+}
+
+func EndMoveColumns(cols int) *endMoveColumns {
+	return &endMoveColumns{cols, make(map[*Range]Range)}
+}
+
+func (e *endMoveColumns) Do(editor *Editor, cursor *Range) {
+	e.originalCursors[cursor] = *cursor
+
+	cursor.End.Column += e.cols
+
+	if cursor.End.Column < 0 {
+		cursor.End.Column = 0
+	}
+}
+
+func (e *endMoveColumns) Undo(editor *Editor, cursor *Range) {
+	*cursor = e.originalCursors[cursor]
+}
+
+func (e *endMoveColumns) Name() string {
+	return "Move Columns"
+}
+
+
 type moveRows struct {
 	rows            int
 	originalCursors map[*Range]Range
@@ -134,6 +162,30 @@ func (m *moveRows) Undo(editor *Editor, cursor *Range) {
 }
 
 func (m *moveRows) Name() string {
+	return "Move Rows"
+}
+
+type endMoveRows struct {
+	rows            int
+	originalCursors map[*Range]Range
+}
+
+func EndMoveRows(rows int) *endMoveRows {
+	return &endMoveRows{rows, make(map[*Range]Range)}
+}
+
+func (e *endMoveRows) Do(editor *Editor, cursor *Range) {
+	// NOTE: OOB is handled in wrapper
+	e.originalCursors[cursor] = *cursor
+
+	cursor.End.Row += e.rows
+}
+
+func (e *endMoveRows) Undo(editor *Editor, cursor *Range) {
+	*cursor = e.originalCursors[cursor]
+}
+
+func (e *endMoveRows) Name() string {
 	return "Move Rows"
 }
 

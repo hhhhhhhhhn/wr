@@ -1,4 +1,4 @@
-// +build !skipAutomatedTests
+// +build !noAuto
 
 package core
 
@@ -17,6 +17,14 @@ var scenarios = []scenario {
 		[]string{"aaaa", "bbbb", "cccc", "dddd"},
 		[]Range{
 			{Location{1, 1}, Location{2, 2}},
+		},
+	},
+	{
+		[]string{"aaaa", "bbbb", "cccc", "dddd"},
+		[]Range{
+			{Location{1, 1}, Location{1, 4}},
+			{Location{2, 1}, Location{2, 4}},
+			{Location{3, 1}, Location{3, 4}},
 		},
 	},
 }

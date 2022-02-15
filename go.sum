@@ -10,6 +10,8 @@ github.com/hhhhhhhhhn/hexes v0.1.1 h1:a4lIsMDrQ4ahHhupPSpuTyXZbWjTdgx37ApeDcrAuP
 github.com/hhhhhhhhhn/hexes v0.1.1/go.mod h1:fJEW4RAf8rhxKHcmUbCQJNOAGGNgXzeVLg/NVXdSBqM=
 github.com/hhhhhhhhhn/hexes v0.1.2 h1:IKCtKCOabMnvR3HP2ww0mD9QFKBcxRcMUhCdaAGs0I0=
 github.com/hhhhhhhhhn/hexes v0.1.2/go.mod h1:fJEW4RAf8rhxKHcmUbCQJNOAGGNgXzeVLg/NVXdSBqM=
+github.com/hhhhhhhhhn/hexes v0.2.0 h1:FbhG1WxquQ8AtiLtw/YONNxT4JySqIhYcT67+TcbjHU=
+github.com/hhhhhhhhhn/hexes v0.2.0/go.mod h1:fJEW4RAf8rhxKHcmUbCQJNOAGGNgXzeVLg/NVXdSBqM=
 github.com/mattn/go-runewidth v0.0.13 h1:lTGmDsbAYt5DmK6OnoV7EuIF1wEIFAcxld6ypU4OSgU=
 github.com/mattn/go-runewidth v0.0.13/go.mod h1:Jdepj2loyihRzMpdS35Xk/zdY8IAYHsh153qUoGf23w=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

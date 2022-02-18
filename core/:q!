@@ -24,8 +24,6 @@ func (b *Buffer) ChangeLine(index int, line []rune) {
 	b.Lines[index] = lineCopy
 }
 
-// NOTE: Be VERY CAREFUL, for performance reasons, this sends the line
-// by reference, so mutating it will change the actual buffer
 func (b *Buffer) GetLine(index int) []rune {
 	return b.Lines[index]
 }

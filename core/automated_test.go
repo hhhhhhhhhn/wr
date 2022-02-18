@@ -29,24 +29,24 @@ var scenarios = []scenario {
 	},
 }
 
-var cursorEdits = []CursorEdit{
-	Split(),
-	Insert("!"),
-	Insert("\n"),
-	Delete(),
-	MoveColumns(1),
-	MoveColumns(10),
-	MoveColumns(-1),
-	MoveColumns(-10),
-	MoveRows(1),
-	MoveRows(10),
-	MoveRows(-1),
-	MoveRows(-10),
-	MoveChars(1),
-	MoveChars(-1),
-	MoveChars(100),
-	MoveChars(-100),
-	BoundToLine(),
+var cursorEdits = []func()CursorEdit{
+	func() CursorEdit {return Split()},
+	func() CursorEdit {return Insert("!")},
+	func() CursorEdit {return Insert("\n")},
+	func() CursorEdit {return Delete()},
+	func() CursorEdit {return MoveColumns(1)},
+	func() CursorEdit {return MoveColumns(10)},
+	func() CursorEdit {return MoveColumns(-1)},
+	func() CursorEdit {return MoveColumns(-10)},
+	func() CursorEdit {return MoveRows(1)},
+	func() CursorEdit {return MoveRows(10)},
+	func() CursorEdit {return MoveRows(-1)},
+	func() CursorEdit {return MoveRows(-10)},
+	func() CursorEdit {return MoveChars(1)},
+	func() CursorEdit {return MoveChars(-1)},
+	func() CursorEdit {return MoveChars(100)},
+	func() CursorEdit {return MoveChars(-100)},
+	func() CursorEdit {return BoundToLine()},
 }
 
 func TestScenarios(t *testing.T) {
@@ -59,7 +59,7 @@ func TestScenarios(t *testing.T) {
 	}
 }
 
-func testScenario(t *testing.T, s scenario, ce CursorEdit) {
+func testScenario(t *testing.T, s scenario, ce func() CursorEdit) {
 	originalLines := append([]string{}, s.lines...)
 	originalCursors := append([]Range{}, s.cursors...)
 
@@ -67,12 +67,13 @@ func testScenario(t *testing.T, s scenario, ce CursorEdit) {
 	editor := Editor{Buffer: buffer}
 
 	for _, cursor := range s.cursors {
-		editor.Do(PushCursor(&cursor))
+		cursorCopy := cursor
+		editor.Do(PushCursor(&cursorCopy))
 	}
 
 	editor.Do(UndoMarker())
 
-	editor.CursorDo(ce)
+	editor.CursorDo(ce())
 	updatedLines := append([]string{}, editor.Buffer.Lines...)
 	updatedCursors := cursors(&editor)
 
@@ -98,7 +99,7 @@ func testScenario(t *testing.T, s scenario, ce CursorEdit) {
 
 	editor.Do(UndoMarker())
 
-	editor.CursorDo(ce)
+	editor.CursorDo(ce())
 	updatedLines = append([]string{}, editor.Buffer.Lines...)
 	updatedCursors = cursors(&editor)
 

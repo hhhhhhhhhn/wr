@@ -97,6 +97,10 @@ func normalMode() {
 			break
 		case 22: // <C-v>
 			multicursor = true
+		case 23: // <C-w>
+			renderer.End()
+			out.Flush()
+			return
 		case 'v':
 			visual = true
 		case 'i':
@@ -162,7 +166,11 @@ func PrintEditor(e *core.Editor, r *hexes.Renderer) {
 	var row int
 	for row = scroll; row < scroll + r.Rows && row < lineAmount; row++ {
 		line := strings.ReplaceAll(e.Buffer.GetLine(row), "\t", strings.Repeat(" ", e.Config.Tabsize))
-		line += strings.Repeat(" ", r.Cols - core.StringColumnSpan(e, line))
+		columnSpan := core.StringColumnSpan(e, line)
+
+		if columnSpan < r.Cols {
+			line += strings.Repeat(" ", r.Cols - core.StringColumnSpan(e, line))
+		}
 
 		col := 0
 		for _, chr := range line {

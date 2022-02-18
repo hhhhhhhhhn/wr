@@ -83,6 +83,36 @@ func TestSplitOOB(t *testing.T) {
 	assert.Equal(t, linesCopy, e.Buffer.Lines)
 }
 
+func TestSplitEOF(t *testing.T) {
+	lines := []string{"0000", "1111", "2222", "3333"}
+	linesCopy := make([]string, len(lines))
+	copy(linesCopy, lines)
+
+	b := Buffer{Lines: lines}
+	e := Editor{Buffer: &b}
+
+	e.Do(
+		UndoMarker(),
+	)
+	e.Do(
+		PushCursor(&Range{Location{1,1}, Location{1,4}}),
+	)
+	e.Do(
+		PushCursor(&Range{Location{2,1}, Location{2,4}}),
+	)
+	e.Do(
+		PushCursor(&Range{Location{3,1}, Location{3,4}}),
+	)
+	e.CursorDo(Split())
+
+	expected := []string{"0000", "1", "111", "2" ,"222", "3", "333"}
+
+	assert.Equal(t, expected, e.Buffer.Lines)
+
+	e.Undo()
+	assert.Equal(t, linesCopy, e.Buffer.Lines)
+}
+
 func TestSplitCursors(t *testing.T) {
 	lines := []string{"0000", "1111", "2222", "3333"}
 	linesCopy := make([]string, len(lines))

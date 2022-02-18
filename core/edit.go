@@ -1,6 +1,8 @@
 package core
 
-import "strings"
+import (
+	"strings"
+)
 
 type Edit interface {
 	Do(editor *Editor)
@@ -56,7 +58,7 @@ func (c *cursorEditWrapper) Undo(e *Editor) {
 		c.removeCursors[i].Undo(e)
 	}
 
-	for _, cursor := range c.sortedCursors {
+	for _, cursor := range c.sortedCursors { 
 		c.cursorEdit.Undo(e, cursor)
 	}
 

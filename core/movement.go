@@ -230,9 +230,9 @@ func (m *moveChars) Do(editor *Editor, cursor *Range) {
 		if cursor.Start.Row >= 0 {
 			line = editor.Buffer.GetLine(cursor.Start.Row)
 		} else {
-			line = ""
+			line = []rune{}
 		}
-		col := StringColumnSpan(editor, line)
+		col := ColumnSpan(editor, line)
 		cursor.Start.Column = col
 		cursor.End.Row = cursor.Start.Row
 		cursor.End.Column = col + 1
@@ -273,12 +273,12 @@ func (b *boundToLine) Do(editor *Editor, cursor *Range) {
 	b.originalCursors[cursor] = *cursor
 
 	startLine := editor.Buffer.GetLine(cursor.Start.Row)
-	startColumnSpan := StringColumnSpan(editor, startLine)
+	startColumnSpan := ColumnSpan(editor, startLine)
 
 	var endColumnSpan int
 	if cursor.Start.Row != cursor.End.Row {
 		endLine := editor.Buffer.GetLine(cursor.End.Row)
-		endColumnSpan = StringColumnSpan(editor, endLine)
+		endColumnSpan = ColumnSpan(editor, endLine)
 	} else {
 		endColumnSpan = startColumnSpan
 	}

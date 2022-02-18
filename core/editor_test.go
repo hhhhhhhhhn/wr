@@ -5,6 +5,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func lines(e *Editor) [][]rune {
+	lines := [][]rune{}
+	for i := 0; i < e.Buffer.GetLength(); i++ {
+		lines = append(lines, e.Buffer.GetLine(i))
+	}
+	return lines
+}
+
 func TestSortCursors(t *testing.T) {
 	cursors := []*Range{
 		{Location{2, 1}, Location{2, 2}},
@@ -25,7 +33,7 @@ func TestSortCursors(t *testing.T) {
 }
 
 func TestUndoLimit(t *testing.T) {
-	b := Buffer{Lines: []string{"0000", "1111", "2222", "3333"}}
+	b := Buffer{Lines: ToRune([]string{"0000", "1111", "2222", "3333"})}
 	e := Editor{Buffer: &b}
 	e.Undo()
 	e.Undo()
@@ -38,7 +46,7 @@ func TestUndo(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: lines}
+	b := Buffer{Lines: ToRune(lines)}
 	e := Editor{Buffer: &b}
 
 	e.Do(
@@ -49,23 +57,23 @@ func TestUndo(t *testing.T) {
 
 	expected := []string{"0000", "11", "11", "2222", "3333"}
 
-	assert.Equal(t, expected, e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
 
 	e.Undo()
-	assert.Equal(t, linesCopy, e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
 
 	e.Do(UndoMarker())
-	e.CursorDo(Insert("!"))
+	e.CursorDo(Insert([]rune("!")))
 	expected = []string{"0000", "11!11", "2222", "3333"}
 
-	assert.Equal(t, expected, e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
 
 	e.Undo()
-	assert.Equal(t, linesCopy, e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
 }
 
 func TestRedo(t *testing.T) {
-	b := Buffer{Lines: []string{"0000", "1111", "2222", "3333"}}
+	b := Buffer{Lines: ToRune([]string{"0000", "1111", "2222", "3333"})}
 	e := Editor{Buffer: &b}
 	e.Redo()
 	e.Redo()

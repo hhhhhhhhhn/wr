@@ -105,12 +105,12 @@ func normalMode() {
 			visual = true
 		case 'i':
 			insertMode()
-			visual = false
 			break
 		case input.ESCAPE:
 			visual = false
 			multicursor = false
-			for i := 0; i < len(editor.Cursors)-1; i++ {
+			cursorLen := len(editor.Cursors)
+			for i := 0; i < cursorLen - 1; i++ {
 				editor.Do(core.RemoveCursor(editor.Cursors[0]))
 			}
 			break
@@ -137,9 +137,9 @@ func insertMode() {
 			break
 		default:
 			if unicode.IsGraphic(event.Chr) || event.Chr == '\t' || event.Chr == '\n' {
-				editor.CursorDo(core.Insert(string(event.Chr)))
+				editor.CursorDo(core.Insert([]rune{event.Chr}))
 			} else {
-				editor.CursorDo(core.Insert(fmt.Sprint(event.Chr)))
+				editor.CursorDo(core.Insert([]rune(fmt.Sprint(event.Chr))))
 			}
 			break
 		}
@@ -148,12 +148,15 @@ func insertMode() {
 }
 
 func main() {
-	editor = core.Editor{Buffer: &core.Buffer{Lines: []string{"aaaa", "bbbb", "cccc"}}, Config: core.EditorConfig{Tabsize: 4}}
+	editor = core.Editor{Buffer: &core.Buffer{Lines: core.ToRune([]string{"aaaa", "bbbb", "cccc"})}, Config: core.EditorConfig{Tabsize: 4}}
 	renderer = hexes.New(os.Stdin, out)
 	listener = input.New(os.Stderr)
 	renderer.Start()
 	editor.Do(
-		core.PushCursor(&core.Range{core.Location{0, 0}, core.Location{0, 1}}),
+		core.PushCursor(&core.Range{
+			Start: core.Location{Row: 0, Column: 0},
+			End: core.Location{Row: 0, Column: 1}},
+		),
 	)
 
 	PrintEditor(&editor, renderer)
@@ -165,11 +168,11 @@ func PrintEditor(e *core.Editor, r *hexes.Renderer) {
 
 	var row int
 	for row = scroll; row < scroll + r.Rows && row < lineAmount; row++ {
-		line := strings.ReplaceAll(e.Buffer.GetLine(row), "\t", strings.Repeat(" ", e.Config.Tabsize))
-		columnSpan := core.StringColumnSpan(e, line)
+		line := strings.ReplaceAll(string(e.Buffer.GetLine(row)), "\t", strings.Repeat(" ", e.Config.Tabsize))
+		columnSpan := core.ColumnSpan(e, []rune(line))
 
 		if columnSpan < r.Cols {
-			line += strings.Repeat(" ", r.Cols - core.StringColumnSpan(e, line))
+			line += strings.Repeat(" ", r.Cols - columnSpan)
 		}
 
 		col := 0

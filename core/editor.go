@@ -75,7 +75,7 @@ func RuneWidth(editor *Editor, chr rune) int {
 	}
 }
 
-func LocationToByteIndex(editor *Editor, location Location) int {
+func LocationToIndex(editor *Editor, location Location) int {
 	column := 0
 	line := editor.Buffer.GetLine(location.Row)
 	for i, chr := range line {
@@ -87,20 +87,8 @@ func LocationToByteIndex(editor *Editor, location Location) int {
 	return len(line)
 }
 
-func ByteIndexToColumn(editor *Editor, index int, line string) int {
-	column := 0
-	for i, chr := range line {
-		if i >= index {
-			break
-		}
-		column += RuneWidth(editor, chr)
-	}
-	return column
-}
-
-func StringColumnSpan(editor *Editor, str string) int {
-	column := 0
-	for _, chr := range str {
+func ColumnSpan(editor *Editor, line []rune) (column int) {
+	for _, chr := range line {
 		column += RuneWidth(editor, chr)
 	}
 	return column
@@ -116,5 +104,22 @@ func SortCursors(cursors []*Range) (sortedCursors []*Range) {
 		return sortedCursors[i].Start.Row < sortedCursors[j].Start.Row
 	})
 	return sortedCursors
+}
+
+func ToRune(lines []string) [][]rune {
+	runes := [][]rune{}
+	for _, line := range lines {
+		runes = append(runes, []rune(line))
+	}
+	return runes
+}
+
+func CopyLines(lines [][]rune) [][]rune {
+	copied := make([][]rune, len(lines))
+	for i, line := range lines {
+		copied[i] = make([]rune, len(line))
+		copy(copied[i], line)
+	}
+	return copied
 }
 

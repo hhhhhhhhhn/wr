@@ -31,8 +31,8 @@ var scenarios = []scenario {
 
 var cursorEdits = []func()CursorEdit{
 	func() CursorEdit {return Split()},
-	func() CursorEdit {return Insert("!")},
-	func() CursorEdit {return Insert("\n")},
+	func() CursorEdit {return Insert([]rune("!"))},
+	func() CursorEdit {return Insert([]rune("\n"))},
 	func() CursorEdit {return Delete()},
 	func() CursorEdit {return MoveColumns(1)},
 	func() CursorEdit {return MoveColumns(10)},
@@ -60,10 +60,10 @@ func TestScenarios(t *testing.T) {
 }
 
 func testScenario(t *testing.T, s scenario, ce func() CursorEdit) {
-	originalLines := append([]string{}, s.lines...)
+	originalLines := ToRune(s.lines)
 	originalCursors := append([]Range{}, s.cursors...)
 
-	buffer := &Buffer{Lines: append([]string{}, originalLines...)}
+	buffer := &Buffer{Lines: CopyLines(originalLines)}
 	editor := Editor{Buffer: buffer}
 
 	for _, cursor := range s.cursors {
@@ -74,7 +74,7 @@ func testScenario(t *testing.T, s scenario, ce func() CursorEdit) {
 	editor.Do(UndoMarker())
 
 	editor.CursorDo(ce())
-	updatedLines := append([]string{}, editor.Buffer.Lines...)
+	updatedLines := lines(&editor)
 	updatedCursors := cursors(&editor)
 
 	editor.Undo()
@@ -94,13 +94,13 @@ func testScenario(t *testing.T, s scenario, ce func() CursorEdit) {
 	assert.Equal(t, updatedCursors, cursors(&editor))
 
 
-	originalLines = append([]string{}, updatedLines...)
+	originalLines = CopyLines(updatedLines)
 	originalCursors = append([]Range{}, updatedCursors...)
 
 	editor.Do(UndoMarker())
 
 	editor.CursorDo(ce())
-	updatedLines = append([]string{}, editor.Buffer.Lines...)
+	updatedLines = lines(&editor)
 	updatedCursors = cursors(&editor)
 
 	editor.Undo()

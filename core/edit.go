@@ -1,9 +1,5 @@
 package core
 
-import (
-	"strings"
-)
-
 type Edit interface {
 	Do(editor *Editor)
 	Undo(editor *Editor)
@@ -89,7 +85,7 @@ func (s *singleSplit) Do(editor *Editor) {
 	copyCursors(editor, s.originalCursors)
 
 	line := editor.Buffer.GetLine(s.row)
-	lineIndex := LocationToByteIndex(editor, Location{s.row, s.column})
+	lineIndex := LocationToIndex(editor, Location{s.row, s.column})
 
 	line1 := line[:lineIndex]
 	line2 := line[lineIndex:]
@@ -116,7 +112,7 @@ func (s *singleSplit) Undo(editor *Editor) {
 	line1 := editor.Buffer.GetLine(s.row)
 	line2 := editor.Buffer.GetLine(s.row+1)
 
-	editor.Buffer.ChangeLine(s.row, line1 + line2)
+	editor.Buffer.ChangeLine(s.row, append(line1, line2...))
 	editor.Buffer.RemoveLine(s.row+1)
 }
 
@@ -160,14 +156,22 @@ func (s *split) Name() string {
 // Used by insertInLine
 type singleInsertInLine struct {
 	originalCursors map[*Range]Range
-	originalLine    string
-	insertion       string
+	originalLine    []rune
+	insertion       []rune
 	row             int
 	column          int
 }
 
-func SingleInsertInLine(insertion string, row, column int) *singleInsertInLine {
-	return &singleInsertInLine{make(map[*Range]Range),"", insertion, row, column}
+func SingleInsertInLine(insertion []rune, row, column int) *singleInsertInLine {
+	return &singleInsertInLine{make(map[*Range]Range),nil, insertion, row, column}
+}
+
+func join(parts... []rune) []rune {
+	joined := []rune{}
+	for _, part := range parts {
+		joined = append(joined, part...)
+	}
+	return joined
 }
 
 func (s *singleInsertInLine) Do(editor *Editor) {
@@ -176,13 +180,13 @@ func (s *singleInsertInLine) Do(editor *Editor) {
 	line := editor.Buffer.GetLine(s.row)
 	s.originalLine = line
 
-	lineIndex := LocationToByteIndex(editor, Location{s.row, s.column})
+	lineIndex := LocationToIndex(editor, Location{s.row, s.column})
 
-	newLine := line[:lineIndex] + s.insertion + line[lineIndex:]
+	newLine := join(line[:lineIndex], s.insertion, line[lineIndex:])
 
 	editor.Buffer.ChangeLine(s.row, newLine)
 
-	insertedColumns := StringColumnSpan(editor, s.insertion)
+	insertedColumns := ColumnSpan(editor, s.insertion)
 
 	for _, cursor := range editor.Cursors {
 		if cursor.Start.Row == s.row && cursor.Start.Column >= s.column {
@@ -206,10 +210,10 @@ func (s *singleInsertInLine) Name() string {
 // Used by insert
 type insertInLine struct {
 	singleInsertInLines map[*Range]*singleInsertInLine
-	insertion           string
+	insertion           []rune
 }
 
-func InsertInLine(insertion string) *insertInLine {
+func InsertInLine(insertion []rune) *insertInLine {
 	return &insertInLine{
 		make(map[*Range]*singleInsertInLine),
 		insertion,
@@ -234,15 +238,27 @@ type insert struct {
 	edits []CursorEdit
 }
 
-func Insert(insertion string) *insert {
+func Insert(insertion []rune) *insert {
 	edits := []CursorEdit{}
-	for i, line := range strings.Split(insertion, "\n") {
+	for i, line := range splitRune(insertion, '\n') {
 		if i > 0 {
 			edits = append(edits, Split())
 		}
 		edits = append(edits, InsertInLine(line))
 	}
 	return &insert{edits}
+}
+
+func splitRune(str []rune, div rune) (output [][]rune) {
+	output = [][]rune{nil}
+	for _, chr := range str {
+		if chr == div {
+			output = append(output, nil)
+		} else {
+			output[len(output)-1] = append(output[len(output)-1], chr)
+		}
+	}
+	return output
 }
 
 func (s *insert) Do(editor *Editor, cursor *Range) {
@@ -263,7 +279,7 @@ func (s *insert) Name() string {
 
 type singleDelete struct {
 	area          Range
-	originalLines   []string
+	originalLines   [][]rune
 	originalCursors map[*Range]Range
 }
 
@@ -278,7 +294,7 @@ func (s *singleDelete) Do(editor *Editor) {
 
 	cursorIncludeNewline(editor, &area)
 
-	originalLines := []string{editor.Buffer.GetLine(area.Start.Row)}
+	originalLines := [][]rune{editor.Buffer.GetLine(area.Start.Row)}
 
 	for lineNumber := area.Start.Row + 1; lineNumber <= area.End.Row; lineNumber++ {
 		originalLines = append(originalLines, editor.Buffer.GetLine(lineNumber))
@@ -286,12 +302,13 @@ func (s *singleDelete) Do(editor *Editor) {
 
 	s.originalLines = originalLines
 
-	cursorStartIndex := LocationToByteIndex(editor, area.Start)
-	cursorEndIndex := LocationToByteIndex(editor, area.End)
+	cursorStartIndex := LocationToIndex(editor, area.Start)
+	cursorEndIndex := LocationToIndex(editor, area.End)
 
-	newLine := 
-		slice(originalLines[0], 0, cursorStartIndex) +
-		slice(originalLines[len(originalLines)-1], cursorEndIndex, -1)
+	newLine := join(
+		slice(originalLines[0], 0, cursorStartIndex),
+		slice(originalLines[len(originalLines)-1], cursorEndIndex, -1),
+	)
 
 	for lineNumber := area.End.Row; lineNumber >= area.Start.Row + 1; lineNumber-- {
 		// NOTE: This is very inneficient, as all lines are relocated after
@@ -323,14 +340,16 @@ func (s *singleDelete) Do(editor *Editor) {
 	}
 }
 
-func slice(str string, start, end int) string {
-	if end > len(str) || end < 0 {
-		end = len(str)
+func slice(line []rune, start, end int) []rune {
+	if end > len(line) || end < 0 {
+		end = len(line)
 	}
-	if start > len(str) - 1 {
-		return ""
+	if start > len(line) - 1 {
+		return []rune{}
 	}
-	return str[start:end]
+	sliced := make([]rune, end - start)
+	copy(sliced, line[start:end])
+	return sliced
 }
 
 func (s *singleDelete) Undo(editor *Editor) {
@@ -390,14 +409,14 @@ func cursorIncludeNewline(editor *Editor, cursor *Range) {
 	if !isInBounds(editor, cursor.End) {
 		// cursor is on last line
 		if cursor.End.Row >= editor.Buffer.GetLength() - 1 {
-			cursor.End.Column = StringColumnSpan(editor, editor.Buffer.GetLine(cursor.End.Row)) + 1
+			cursor.End.Column = ColumnSpan(editor, editor.Buffer.GetLine(cursor.End.Row)) + 1
 		} else {
 			cursor.End.Row++
 			cursor.End.Column = 0
 		}
 	}
 	if !isInBounds(editor, cursor.Start) {
-		cursor.Start.Column = StringColumnSpan(editor, editor.Buffer.GetLine(cursor.Start.Row))
+		cursor.Start.Column = ColumnSpan(editor, editor.Buffer.GetLine(cursor.Start.Row))
 	}
 }
 
@@ -408,7 +427,7 @@ func isInBounds(editor *Editor, location Location) bool {
 
 	location.Column--
 	line := editor.Buffer.GetLine(location.Row)
-	if location.Column >= StringColumnSpan(editor, line) {
+	if location.Column >= ColumnSpan(editor, line) {
 		return false
 	}
 	return true

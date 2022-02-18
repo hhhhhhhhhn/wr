@@ -10,7 +10,7 @@ func TestMoveColumns(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: lines}
+	b := Buffer{Lines: ToRune(lines)}
 	e := Editor{Buffer: &b}
 
 	e.Do(
@@ -25,16 +25,16 @@ func TestMoveColumns(t *testing.T) {
 	e.CursorDo(MoveColumns(2))
 	e.CursorDo(Split())
 	e.CursorDo(MoveColumns(-100))
-	e.CursorDo(Insert("!"))
+	e.CursorDo(Insert([]rune("!")))
 	e.CursorDo(MoveColumns(-1))
 	e.CursorDo(Delete())
 
 	expected := []string{"0000", "111", "1", "2222", "", "3333"}
 
-	assert.Equal(t, expected, e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
 
 	e.Undo()
-	assert.Equal(t, linesCopy, e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
 }
 
 func TestRemoveCursor(t *testing.T) {
@@ -42,7 +42,7 @@ func TestRemoveCursor(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: lines}
+	b := Buffer{Lines: ToRune(lines)}
 	e := Editor{Buffer: &b}
 
 	e.Do(
@@ -59,10 +59,10 @@ func TestRemoveCursor(t *testing.T) {
 
 	expected := []string{"0000", "1111", "222", "2", "3333"}
 
-	assert.Equal(t, expected, e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
 
 	e.Undo()
-	assert.Equal(t, linesCopy, e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
 }
 
 func TestMoveRows(t *testing.T) {
@@ -70,7 +70,7 @@ func TestMoveRows(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: lines}
+	b := Buffer{Lines: ToRune(lines)}
 	e := Editor{Buffer: &b}
 
 	e.Do(
@@ -87,16 +87,16 @@ func TestMoveRows(t *testing.T) {
 
 	expected := []string{"0000", "1111", "2222", "33", "33"}
 
-	assert.Equal(t, expected, e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
 
 	e.Undo()
-	assert.Equal(t, linesCopy, e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
 }
 
 func TestMoveChars(t *testing.T) {
 	lines := []string{"0000", "1111", "2222", "3333"}
 
-	b := Buffer{Lines: lines}
+	b := Buffer{Lines: ToRune(lines)}
 	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
@@ -119,7 +119,7 @@ func TestMoveCharsMultibyte(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: lines}
+	b := Buffer{Lines: ToRune(lines)}
 	e := Editor{Buffer: &b}
 
 	e.Do(
@@ -129,16 +129,16 @@ func TestMoveCharsMultibyte(t *testing.T) {
 		PushCursor(&Range{Location{1,2},Location{1,3}}),
 	)
 	e.CursorDo(MoveChars(1))
-	e.CursorDo(Insert("!"))
+	e.CursorDo(Insert([]rune("!")))
 	e.CursorDo(MoveChars(-2))
-	e.CursorDo(Insert("!"))
+	e.CursorDo(Insert([]rune("!")))
 
 	expected := []string{"0000", "11!ñ!11", "2222", "3333"}
 
-	assert.Equal(t, expected, e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
 
 	e.Undo()
-	assert.Equal(t, linesCopy, e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
 }
 
 func TestMoveCharsWide(t *testing.T) {
@@ -146,7 +146,7 @@ func TestMoveCharsWide(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: lines}
+	b := Buffer{Lines: ToRune(lines)}
 	e := Editor{Buffer: &b}
 
 	e.Do(
@@ -156,16 +156,16 @@ func TestMoveCharsWide(t *testing.T) {
 		PushCursor(&Range{Location{1,2},Location{1,3}}),
 	)
 	e.CursorDo(MoveChars(1))
-	e.CursorDo(Insert("!"))
+	e.CursorDo(Insert([]rune("!")))
 	e.CursorDo(MoveChars(-2))
-	e.CursorDo(Insert("!"))
+	e.CursorDo(Insert([]rune("!")))
 
 	expected := []string{"0000", "11!ｏ!11", "2222", "3333"}
 
-	assert.Equal(t, expected, e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
 
 	e.Undo()
-	assert.Equal(t, linesCopy, e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
 }
 
 func TestMoveCharsWideMiddle(t *testing.T) {
@@ -173,7 +173,7 @@ func TestMoveCharsWideMiddle(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: lines}
+	b := Buffer{Lines: ToRune(lines)}
 	e := Editor{Buffer: &b}
 
 	e.Do(
@@ -184,12 +184,12 @@ func TestMoveCharsWideMiddle(t *testing.T) {
 	)
 	e.CursorDo(MoveRows(1))
 	e.CursorDo(MoveChars(1))
-	e.CursorDo(Insert("!"))
+	e.CursorDo(Insert([]rune("!")))
 
 	expected := []string{"0000", "1111", "22学!22", "3333"}
 
-	assert.Equal(t, expected, e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
 
 	e.Undo()
-	assert.Equal(t, linesCopy, e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
 }

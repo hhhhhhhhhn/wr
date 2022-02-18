@@ -48,6 +48,15 @@ func (e *Editor) Undo() {
 	}
 }
 
+// Undos latest Edit, ignoring markers and such
+func (e *Editor) SingleUndo() {
+	if e.HistoryIndex == 0 {
+		return
+	}
+	e.HistoryIndex--
+	e.History[e.HistoryIndex].Undo(e)
+}
+
 func (e *Editor) Redo() {
 	for {
 		e.HistoryIndex++

@@ -117,6 +117,9 @@ func normalMode() {
 		default:
 			break
 		}
+		if len(editor.Cursors) == 0 {
+			editor.SingleUndo()
+		}
 		PrintEditor(&editor, renderer)
 	}
 }

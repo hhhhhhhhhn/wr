@@ -166,10 +166,17 @@ func SingleInsertInLine(insertion []rune, row, column int) *singleInsertInLine {
 	return &singleInsertInLine{make(map[*Range]Range),nil, insertion, row, column}
 }
 
-func join(parts... []rune) []rune {
-	joined := []rune{}
+func Join(parts... []rune) []rune {
+	length := 0
 	for _, part := range parts {
-		joined = append(joined, part...)
+		length += len(part)
+	}
+
+	joined := make([]rune, length)
+	i := 0
+
+	for _, part := range parts {
+		i += copy(joined[i:], part)
 	}
 	return joined
 }
@@ -182,7 +189,7 @@ func (s *singleInsertInLine) Do(editor *Editor) {
 
 	lineIndex := LocationToIndex(editor, Location{s.row, s.column})
 
-	newLine := join(line[:lineIndex], s.insertion, line[lineIndex:])
+	newLine := Join(line[:lineIndex], s.insertion, line[lineIndex:])
 
 	editor.Buffer.ChangeLine(s.row, newLine)
 
@@ -305,7 +312,7 @@ func (s *singleDelete) Do(editor *Editor) {
 	cursorStartIndex := LocationToIndex(editor, area.Start)
 	cursorEndIndex := LocationToIndex(editor, area.End)
 
-	newLine := join(
+	newLine := Join(
 		slice(originalLines[0], 0, cursorStartIndex),
 		slice(originalLines[len(originalLines)-1], cursorEndIndex, -1),
 	)
@@ -340,6 +347,7 @@ func (s *singleDelete) Do(editor *Editor) {
 	}
 }
 
+// Helper, prevents OOB
 func slice(line []rune, start, end int) []rune {
 	if end > len(line) || end < 0 {
 		end = len(line)
@@ -347,9 +355,7 @@ func slice(line []rune, start, end int) []rune {
 	if start > len(line) - 1 {
 		return []rune{}
 	}
-	sliced := make([]rune, end - start)
-	copy(sliced, line[start:end])
-	return sliced
+	return line[start:end]
 }
 
 func (s *singleDelete) Undo(editor *Editor) {

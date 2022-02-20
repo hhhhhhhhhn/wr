@@ -71,6 +71,12 @@ func (e *Editor) Redo() {
 	}
 }
 
+var markUndo = &undoMarker{}
+// Marks the start of an action to be undone
+func (e *Editor) MarkUndo() {
+	e.Do(markUndo)
+}
+
 func (e *Editor) CursorDo(cursorEdit CursorEdit) {
 	e.Do(wrapCursorEdit(cursorEdit))
 }
@@ -92,6 +98,17 @@ func LocationToIndex(editor *Editor, location Location) int {
 			return i
 		}
 		column += RuneWidth(editor, chr)
+	}
+	return len(line)
+}
+
+func ColumnToIndex(editor *Editor, line []rune, column int) int {
+	currentCol := 0
+	for i, chr := range line {
+		currentCol += RuneWidth(editor, chr)
+		if currentCol > column {
+			return i
+		}
 	}
 	return len(line)
 }

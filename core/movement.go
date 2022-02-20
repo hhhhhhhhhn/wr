@@ -204,43 +204,27 @@ func (m *moveChars) Do(editor *Editor, cursor *Range) {
 	line := editor.Buffer.GetLine(cursor.Start.Row)
 
 	// The column in which each character/rune of the line is
-	cols  := []int{0}
-
-	for _, chr := range line {
-		cols = append(cols, cols[len(cols)-1] + RuneWidth(editor, chr))
-	}
-
-	cursorChrIndex := -1
-	for i, chrCol := range cols {
-		if chrCol > cursor.Start.Column {
-			cursorChrIndex = i-1
-			break
-		}
-	}
-	if cursorChrIndex == -1 {
-		cursorChrIndex = len(cols) - 1
-	}
-
+	cursorChrIndex := ColumnToIndex(editor, line, cursor.Start.Column)
 	newCursorChrIndex := cursorChrIndex + m.chars
 
-	// Go to the end of the previous line
-	if newCursorChrIndex < 0 {
+	// OOB, new position is before start of file
+	if newCursorChrIndex < 0 && cursor.Start.Row == 0 {
 		cursor.Start.Row--
-		// Prevents crash
-		if cursor.Start.Row >= 0 {
-			line = editor.Buffer.GetLine(cursor.Start.Row)
-		} else {
-			line = []rune{}
-		}
-		col := ColumnSpan(editor, line)
-		cursor.Start.Column = col
-		cursor.End.Row = cursor.Start.Row
-		cursor.End.Column = col + 1
 		return
 	}
 
+	// Go to the end of the previous line if on start
+	if newCursorChrIndex < 0 {
+		cursor.Start.Row--
+		line = editor.Buffer.GetLine(cursor.Start.Row)
+		cursor.Start.Column = ColumnSpan(editor, line)
+		cursor.End.Row = cursor.Start.Row
+		cursor.End.Column = cursor.Start.Column + 1
+		return
+	}
 
-	if newCursorChrIndex >= len(cols) {
+	// Go to start of next line if on end
+	if newCursorChrIndex > len(line) {
 		cursor.Start.Row++
 		cursor.End.Row = cursor.Start.Row
 		cursor.Start.Column = 0
@@ -249,7 +233,7 @@ func (m *moveChars) Do(editor *Editor, cursor *Range) {
 	}
 
 	cursor.End.Row = cursor.Start.Row
-	cursor.Start.Column = cols[newCursorChrIndex]
+	cursor.Start.Column = ColumnSpan(editor, line[:newCursorChrIndex])
 	cursor.End.Column = cursor.Start.Column + 1
 }
 
@@ -258,6 +242,56 @@ func (m *moveChars) Undo(editor *Editor, cursor *Range) {
 }
 
 func (m *moveChars) Name() string {
+	return "Move Chars"
+}
+
+type endMoveChars struct {
+	chars           int
+	originalCursors map[*Range]Range
+}
+
+func EndMoveChars(chars int) *endMoveChars {
+	return &endMoveChars{chars, make(map[*Range]Range)}
+}
+
+func (e *endMoveChars) Do(editor *Editor, cursor *Range) {
+	e.originalCursors[cursor] = *cursor
+
+	line := editor.Buffer.GetLine(cursor.Start.Row)
+
+	// The column in which each character/rune of the line is
+	cursorChrIndex := ColumnToIndex(editor, line, cursor.End.Column)
+	newCursorChrIndex := cursorChrIndex + e.chars
+
+	// OOB, new position is before start of file
+	if newCursorChrIndex < 0 && cursor.End.Row == 0 {
+		cursor.End.Row--
+		return
+	}
+
+	// Go to the end of the previous line if on start
+	if newCursorChrIndex < 0 {
+		cursor.End.Row--
+		line = editor.Buffer.GetLine(cursor.End.Row)
+		cursor.End.Column = ColumnSpan(editor, line)
+		return
+	}
+
+	// Go to start of next line if on end
+	if newCursorChrIndex > len(line) {
+		cursor.End.Row++
+		cursor.End.Column = 1
+		return
+	}
+
+	cursor.End.Column = ColumnSpan(editor, line[:newCursorChrIndex])
+}
+
+func (e *endMoveChars) Undo(editor *Editor, cursor *Range) {
+	*cursor = e.originalCursors[cursor]
+}
+
+func (e *endMoveChars) Name() string {
 	return "Move Chars"
 }
 

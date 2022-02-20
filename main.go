@@ -29,14 +29,14 @@ func normalMode() {
 		switch(event.Chr) {
 		case 'H':
 			if visual {
-				editor.CursorDo(core.EndMoveColumns(-1))
+				editor.CursorDo(core.EndMoveChars(-1))
 			} else {
 				editor.CursorDo(core.MoveColumns(-1))
 			}
 			break
 		case 'L':
 			if visual {
-				editor.CursorDo(core.EndMoveColumns(1))
+				editor.CursorDo(core.EndMoveChars(1))
 			} else {
 				editor.CursorDo(core.MoveColumns(1))
 			}
@@ -80,30 +80,37 @@ func normalMode() {
 			}
 			break
 		case 'u':
-			editor.Do(core.UndoMarker())
-			break
-		case 'U':
 			editor.Undo()
 			break
-		case 'r':
+		case 'U':
+			editor.MarkUndo()
+			break
+		case 18: // <C-r>
 			editor.Redo()
 			break
 		case 'R':
 			renderer.Refresh()
 			break
 		case 'd':
+			editor.MarkUndo()
 			editor.CursorDo(core.Delete())
 			visual = false
 			break
 		case 22: // <C-v>
 			multicursor = true
+			break
 		case 23: // <C-w>
 			renderer.End()
+			out.Flush()
+			return
+		case 12: // <C-l>
+			renderer.Refresh()
 			out.Flush()
 			return
 		case 'v':
 			visual = true
 		case 'i':
+			editor.MarkUndo()
 			insertMode()
 			break
 		case input.ESCAPE:
@@ -117,7 +124,7 @@ func normalMode() {
 		default:
 			break
 		}
-		if len(editor.Cursors) == 0 {
+		for len(editor.Cursors) == 0 {
 			editor.SingleUndo()
 		}
 		PrintEditor(&editor, renderer)
@@ -125,7 +132,6 @@ func normalMode() {
 }
 
 func insertMode() {
-	editor.Do(core.UndoMarker())
 	for {
 		event := listener.GetEvent()
 		if event.EventType != input.KeyPressed {

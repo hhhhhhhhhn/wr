@@ -45,14 +45,18 @@ func normalMode() {
 			if visual {
 				editor.CursorDo(core.EndMoveColumns(-1))
 			} else {
-				editor.CursorDo(core.MoveChars(-1))
+				movement := core.Chars(-1)
+				editor.Do(core.GoTo(movement))
+				//editor.CursorDo(core.MoveChars(-1))
 			}
 			break
 		case 'l':
 			if visual {
 				editor.CursorDo(core.EndMoveColumns(1))
 			} else {
-				editor.CursorDo(core.MoveChars(1))
+				//editor.CursorDo(core.MoveChars(1))
+				movement := core.Chars(1)
+				editor.Do(core.GoTo(movement))
 			}
 			break
 		case 'j':

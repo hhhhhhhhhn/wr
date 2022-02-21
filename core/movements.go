@@ -36,7 +36,9 @@ func Chars(chars int) Movement {
 			cursor.Start.Column = ColumnSpan(editor, line)
 			cursor.End.Row = cursor.Start.Row
 			cursor.End.Column = cursor.Start.Column + 1
-			return cursor
+
+			// The +1 is because of the newline
+			return Chars(newCursorChrIndex + 1)(editor, cursor)
 		}
 
 		// Go to start of next line if on end
@@ -45,6 +47,11 @@ func Chars(chars int) Movement {
 			cursor.End.Row = cursor.Start.Row
 			cursor.Start.Column = 0
 			cursor.End.Column = 1
+
+			if cursor.Start.Row < editor.Buffer.GetLength() {
+				// The -1 is because of the newline
+				return Chars(newCursorChrIndex - len(line) - 1)(editor, cursor)
+			}
 			return cursor
 		}
 

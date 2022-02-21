@@ -37,24 +37,46 @@ func unGetEvent() {
 	eventIndex--
 }
 
+func getMultiplier() int {
+	multiplier := 0
+	for {
+		event := getEvent()
+		for event.EventType != input.KeyPressed {
+			event = getEvent()
+		}
+		switch event.Chr {
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			multiplier = 10 * multiplier + int(event.Chr - '0')
+			break
+		default:
+			unGetEvent()
+			if multiplier == 0 {
+				return 1
+			}
+			return multiplier
+		}
+	}
+}
+
 func normalGetMovement() (movement core.Movement, ok bool) {
+	multiplier := getMultiplier()
 	event := getEvent()
 	for event.EventType != input.KeyPressed {
 		event = getEvent()
 	}
 	switch event.Chr {
 	case 'l':
-		return core.Chars(1), true
+		return core.Chars(multiplier), true
 	case 'h':
-		return core.Chars(-1), true
+		return core.Chars(-multiplier), true
 	case 'L':
-		return core.Columns(1), true
+		return core.Columns(multiplier), true
 	case 'H':
-		return core.Columns(-1), true
+		return core.Columns(-multiplier), true
 	case 'j':
-		return core.Rows(1), true
+		return core.Rows(multiplier), true
 	case 'k':
-		return core.Rows(-1), true
+		return core.Rows(-multiplier), true
 	default:
 		unGetEvent()
 		return nil, false
@@ -62,23 +84,24 @@ func normalGetMovement() (movement core.Movement, ok bool) {
 }
 
 func visualGetMovement() (movement core.Movement, ok bool) {
+	multiplier := getMultiplier()
 	event := getEvent()
 	for event.EventType != input.KeyPressed {
 		event = getEvent()
 	}
 	switch event.Chr {
 	case 'L':
-		return core.Chars(1), true
+		return core.Chars(multiplier), true
 	case 'H':
-		return core.Chars(-1), true
+		return core.Chars(-multiplier), true
 	case 'l':
-		return core.Columns(1), true
+		return core.Columns(multiplier), true
 	case 'h':
-		return core.Columns(-1), true
+		return core.Columns(-multiplier), true
 	case 'j':
-		return core.Rows(1), true
+		return core.Rows(multiplier), true
 	case 'k':
-		return core.Rows(-1), true
+		return core.Rows(-multiplier), true
 	default:
 		unGetEvent()
 		return nil, false
@@ -146,7 +169,7 @@ func visualMode() {
 		}
 		PrintEditor(&editor, renderer)
 
-		movement, ok := normalGetMovement()
+		movement, ok := visualGetMovement()
 		if ok {
 			editor.Do(core.ExpandSelection(movement))
 			continue

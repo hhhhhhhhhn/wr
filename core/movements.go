@@ -105,3 +105,80 @@ func (g *goTo) Undo(e *Editor) {
 func (g *goTo) Name() string {
 	return "Go To"
 }
+
+type selectUntil struct {
+	originalCursors []Range
+	movement        Movement
+}
+
+func SelectUntil(movement Movement) *selectUntil {
+	return &selectUntil{movement: movement}
+}
+
+func (s *selectUntil) Do(e *Editor) {
+	for _, cursor := range e.Cursors {
+		s.originalCursors = append(s.originalCursors, *cursor)
+		cursor.End = s.movement(e, *cursor).Start
+	}
+
+	lastRow := e.Buffer.GetLength() - 1
+	for _, cursor := range e.Cursors {
+		if cursor.End.Row < 0 ||
+			cursor.End.Row > lastRow {
+				cursor.End.Row = lastRow
+				cursor.End.Column = ColumnSpan(e, e.Buffer.GetLine(lastRow))
+			}
+		if cursor.End.Column < 0 {
+			cursor.End.Column = 0
+		}
+	}
+}
+
+func (s *selectUntil) Undo(e *Editor) {
+	for i, cursor := range e.Cursors {
+		*cursor = s.originalCursors[i]
+	}
+}
+
+func (s *selectUntil) Name() string {
+	return "Select Until"
+}
+
+type expandSelection struct {
+	originalCursors []Range
+	movement        Movement
+}
+
+func ExpandSelection(movement Movement) *expandSelection {
+	return &expandSelection{movement: movement}
+}
+
+func (e *expandSelection) Do(editor *Editor) {
+	for _, cursor := range editor.Cursors {
+		e.originalCursors = append(e.originalCursors, *cursor)
+		end := Range{Start: cursor.End, End: cursor.End}
+		cursor.End = e.movement(editor, end).Start
+	}
+
+	lastRow := editor.Buffer.GetLength() - 1
+	for _, cursor := range editor.Cursors {
+		if cursor.End.Row < 0 ||
+			cursor.End.Row > lastRow {
+				cursor.End.Row = lastRow
+				cursor.End.Column = ColumnSpan(editor, editor.Buffer.GetLine(lastRow))
+			}
+		if cursor.End.Column < 0 {
+			cursor.End.Column = 0
+		}
+	}
+}
+
+func (e *expandSelection) Undo(editor *Editor) {
+	for i, cursor := range editor.Cursors {
+		*cursor = e.originalCursors[i]
+	}
+}
+
+func (e *expandSelection) Name() string {
+	return "Select Until"
+}

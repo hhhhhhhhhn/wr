@@ -14,75 +14,96 @@ import (
 
 var scroll = 0
 var out = bufio.NewWriterSize(os.Stdout, 4096)
+var in  = bufio.NewReader(os.Stdin)
 var editor core.Editor
 var renderer *hexes.Renderer
 var listener  *input.Listener
 
+const eventsLength = 10
+var events [eventsLength]*input.Event
+var latestEvent = -1
+var eventIndex = -1
+
+func getEvent() *input.Event {
+	eventIndex++
+	for eventIndex > latestEvent {
+		latestEvent++
+		events[latestEvent % eventsLength] = listener.GetEvent()
+	}
+	return events[eventIndex % eventsLength]
+}
+
+func unGetEvent() {
+	eventIndex--
+}
+
+func normalGetMovement() (movement core.Movement, ok bool) {
+	event := getEvent()
+	for event.EventType != input.KeyPressed {
+		event = getEvent()
+	}
+	switch event.Chr {
+	case 'l':
+		return core.Chars(1), true
+	case 'h':
+		return core.Chars(-1), true
+	case 'L':
+		return core.Columns(1), true
+	case 'H':
+		return core.Columns(-1), true
+	case 'j':
+		return core.Rows(1), true
+	case 'k':
+		return core.Rows(-1), true
+	default:
+		unGetEvent()
+		return nil, false
+	}
+}
+
+func visualGetMovement() (movement core.Movement, ok bool) {
+	event := getEvent()
+	for event.EventType != input.KeyPressed {
+		event = getEvent()
+	}
+	switch event.Chr {
+	case 'L':
+		return core.Chars(1), true
+	case 'H':
+		return core.Chars(-1), true
+	case 'l':
+		return core.Columns(1), true
+	case 'h':
+		return core.Columns(-1), true
+	case 'j':
+		return core.Rows(1), true
+	case 'k':
+		return core.Rows(-1), true
+	default:
+		unGetEvent()
+		return nil, false
+	}
+}
+
 func normalMode() {
-	multicursor := false
-	visual      := false
 	for {
-		event := listener.GetEvent()
+		for len(editor.Cursors) == 0 {
+			editor.SingleUndo()
+		}
+		PrintEditor(&editor, renderer)
+
+		movement, ok := normalGetMovement()
+		if ok {
+			editor.Do(core.GoTo(movement))
+			continue
+		}
+
+		event := getEvent()
 		if event.EventType != input.KeyPressed {
 			continue
 		}
+
 		switch(event.Chr) {
-		case 'H':
-			if visual {
-				editor.CursorDo(core.EndMoveChars(-1))
-			} else {
-				editor.CursorDo(core.MoveColumns(-1))
-			}
-			break
-		case 'L':
-			if visual {
-				editor.CursorDo(core.EndMoveChars(1))
-			} else {
-				editor.CursorDo(core.MoveColumns(1))
-			}
-			break
-		case 'h':
-			if visual {
-				editor.CursorDo(core.EndMoveColumns(-1))
-			} else {
-				movement := core.Chars(-1)
-				editor.Do(core.GoTo(movement))
-				//editor.CursorDo(core.MoveChars(-1))
-			}
-			break
-		case 'l':
-			if visual {
-				editor.CursorDo(core.EndMoveColumns(1))
-			} else {
-				//editor.CursorDo(core.MoveChars(1))
-				movement := core.Chars(1)
-				editor.Do(core.GoTo(movement))
-			}
-			break
-		case 'j':
-			if multicursor {
-				editor.Do(core.PushCursorBelow())
-			} else {
-				editor.CursorDo(core.MoveRows(1))
-			}
-			break
-		case 'k':
-			if multicursor {
-				if len(editor.Cursors) > 1 {
-					editor.Do(core.RemoveCursor(editor.Cursors[len(editor.Cursors) - 1]))
-				}
-			} else {
-				editor.CursorDo(core.MoveRows(-1))
-			}
-			break
-		case 'J':
-			scroll++
-			break
-		case 'K':
-			if scroll > 0 {
-				scroll--
-			}
-			break
 		case 'u':
 			editor.Undo()
 			break
@@ -92,52 +113,86 @@ func normalMode() {
 		case 18: // <C-r>
 			editor.Redo()
 			break
-		case 'R':
+		case 23: // <C-w>
+			renderer.End()
+			out.Flush()
+			os.Exit(0)
+			break
+		case 12: // <C-l>
 			renderer.Refresh()
+			out.Flush()
+			break
+		case 'v':
+			visualMode()
+			break
+		case 'i':
+			editor.MarkUndo()
+			insertMode()
 			break
 		case 'd':
-			editor.MarkUndo()
-			editor.CursorDo(core.Delete())
-			visual = false
+			if movement, ok := normalGetMovement(); ok {
+				editor.MarkUndo()
+				editor.Do(core.SelectUntil(movement))
+				editor.CursorDo(core.Delete())
+			}
+		}
+	}
+}
+
+func visualMode() {
+	for {
+		for len(editor.Cursors) == 0 {
+			editor.SingleUndo()
+		}
+		PrintEditor(&editor, renderer)
+
+		movement, ok := normalGetMovement()
+		if ok {
+			editor.Do(core.ExpandSelection(movement))
+			continue
+		}
+
+		event := getEvent()
+		if event.EventType != input.KeyPressed {
+			continue
+		}
+
+		switch(event.Chr) {
+		case 'u':
+			editor.Undo()
 			break
-		case 22: // <C-v>
-			multicursor = true
+		case 'U':
+			editor.MarkUndo()
+			break
+		case 18: // <C-r>
+			editor.Redo()
 			break
 		case 23: // <C-w>
 			renderer.End()
 			out.Flush()
-			return
+			os.Exit(0)
+			break
 		case 12: // <C-l>
 			renderer.Refresh()
 			out.Flush()
-			return
-		case 'v':
-			visual = true
+			break
 		case 'i':
 			editor.MarkUndo()
 			insertMode()
 			break
 		case input.ESCAPE:
-			visual = false
-			multicursor = false
-			cursorLen := len(editor.Cursors)
-			for i := 0; i < cursorLen - 1; i++ {
-				editor.Do(core.RemoveCursor(editor.Cursors[0]))
-			}
-			break
-		default:
-			break
+			return
+		case 'd':
+			editor.MarkUndo()
+			editor.CursorDo(core.Delete())
 		}
-		for len(editor.Cursors) == 0 {
-			editor.SingleUndo()
-		}
-		PrintEditor(&editor, renderer)
 	}
 }
 
 func insertMode() {
 	for {
-		event := listener.GetEvent()
+		PrintEditor(&editor, renderer)
+		event := getEvent()
 		if event.EventType != input.KeyPressed {
 			continue
 		}
@@ -156,14 +211,13 @@ func insertMode() {
 			}
 			break
 		}
-		PrintEditor(&editor, renderer)
 	}
 }
 
 func main() {
 	editor = core.Editor{Buffer: &core.Buffer{Lines: core.ToRune([]string{"aaaa", "bbbb", "cccc"})}, Config: core.EditorConfig{Tabsize: 4}}
 	renderer = hexes.New(os.Stdin, out)
-	listener = input.New(os.Stderr)
+	listener = input.New(in)
 	renderer.Start()
 	editor.Do(
 		core.PushCursor(&core.Range{
@@ -209,10 +263,9 @@ func PrintEditor(e *core.Editor, r *hexes.Renderer) {
 
 func isWithinCursor(e *core.Editor, row, col int) bool {
 	for _, cursor := range e.Cursors {
-		if (row >= cursor.Start.Row &&
-			col >= cursor.Start.Column &&
-			row <= cursor.End.Row &&
-			col < cursor.End.Column) {
+		if (
+			((row == cursor.Start.Row && col >= cursor.Start.Column) || (row > cursor.Start.Row)) &&
+			((row == cursor.End.Row && col < cursor.End.Column) || (row < cursor.End.Row))){
 				return true
 			}
 	}

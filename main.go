@@ -73,9 +73,9 @@ func normalGetMovement() (movement core.Movement, ok bool) {
 		return core.Columns(multiplier), true
 	case 'H':
 		return core.Columns(-multiplier), true
-	case 'j':
+	case 'j', 'J':
 		return core.Rows(multiplier), true
-	case 'k':
+	case 'k', 'K':
 		return core.Rows(-multiplier), true
 	default:
 		unGetEvent()
@@ -98,9 +98,9 @@ func visualGetMovement() (movement core.Movement, ok bool) {
 		return core.Columns(multiplier), true
 	case 'h':
 		return core.Columns(-multiplier), true
-	case 'j':
+	case 'j', 'J':
 		return core.Rows(multiplier), true
-	case 'k':
+	case 'k', 'K':
 		return core.Rows(-multiplier), true
 	default:
 		unGetEvent()
@@ -140,6 +140,18 @@ func normalMode() {
 			renderer.End()
 			out.Flush()
 			os.Exit(0)
+			break
+		case '\n': // Also <C-j>
+			editor.Do(core.PushCursorBelow())
+			break
+		case 11: // <C-k>
+			editor.Do(core.RemoveCursor(editor.Cursors[len(editor.Cursors)-1]))
+			break
+		case input.ESCAPE:
+			cursors := len(editor.Cursors)
+			for i := 0; i < cursors - 1; i++ {
+				editor.Do(core.RemoveCursor(editor.Cursors[0]))
+			}
 			break
 		case 12: // <C-l>
 			renderer.Refresh()
@@ -213,6 +225,13 @@ func visualMode() {
 }
 
 func insertMode() {
+	insertion := []rune{}
+	editor.MarkUndo()
+	cursors := len(editor.Cursors)
+	for i := 0; i < cursors - 20; i ++ {
+		editor.Do(core.RemoveCursor(editor.Cursors[0]))
+	}
+
 	for {
 		PrintEditor(&editor, renderer)
 		event := getEvent()
@@ -221,15 +240,20 @@ func insertMode() {
 		}
 		switch(event.Chr) {
 		case input.ESCAPE:
+			editor.Undo()
+			editor.CursorDo(core.Insert(insertion))
 			return
 		case input.BACKSPACE:
+			insertion = insertion[:len(insertion)-1]
 			editor.CursorDo(core.MoveChars(-1))
 			editor.CursorDo(core.Delete())
 			break
 		default:
 			if unicode.IsGraphic(event.Chr) || event.Chr == '\t' || event.Chr == '\n' {
+				insertion = append(insertion, event.Chr)
 				editor.CursorDo(core.Insert([]rune{event.Chr}))
 			} else {
+				insertion = append(insertion, []rune(fmt.Sprint(event.Chr))...)
 				editor.CursorDo(core.Insert([]rune(fmt.Sprint(event.Chr))))
 			}
 			break
@@ -249,11 +273,18 @@ func main() {
 		),
 	)
 
-	PrintEditor(&editor, renderer)
 	normalMode()
 }
 
 func PrintEditor(e *core.Editor, r *hexes.Renderer) {
+	lastCursorRow := e.Cursors[len(e.Cursors) - 1].Start.Row
+	if lastCursorRow < scroll {
+		scroll = lastCursorRow
+	}
+	if lastCursorRow > scroll + r.Rows - 1 {
+		scroll = lastCursorRow - r.Rows + 1
+	}
+
 	lineAmount := e.Buffer.GetLength()
 
 	var row int
@@ -267,8 +298,13 @@ func PrintEditor(e *core.Editor, r *hexes.Renderer) {
 
 		col := 0
 		for _, chr := range line {
-			if isWithinCursor(e, row, col) {
-				r.SetAttribute(hexes.REVERSE)
+			withinCursor, withinLast := isWithinCursor(e, row, col)
+			if withinCursor {
+				if withinLast {
+					r.SetAttribute(hexes.MAGENTA + hexes.REVERSE)
+				} else {
+					r.SetAttribute(hexes.REVERSE)
+				}
 			} else {
 				r.SetAttribute(r.DefaultAttribute)
 			}
@@ -284,13 +320,16 @@ func PrintEditor(e *core.Editor, r *hexes.Renderer) {
 	out.Flush()
 }
 
-func isWithinCursor(e *core.Editor, row, col int) bool {
-	for _, cursor := range e.Cursors {
+func isWithinCursor(e *core.Editor, row, col int) (isWithin bool, isLast bool) {
+	for i, cursor := range e.Cursors {
 		if (
 			((row == cursor.Start.Row && col >= cursor.Start.Column) || (row > cursor.Start.Row)) &&
 			((row == cursor.End.Row && col < cursor.End.Column) || (row < cursor.End.Row))){
-				return true
+				if i == len(e.Cursors) - 1 {
+					return true, true
+				}
+				return true, false
 			}
 	}
-	return false
+	return false, false
 }

@@ -91,8 +91,8 @@ func (g *goTo) Do(e *Editor) {
 		if cursor.Start.Column < 0 {
 			cursor.Start.Column = 0
 		}
-		if cursor.End.Column < 0 {
-			cursor.End.Column = 0
+		if cursor.End.Column < 1 {
+			cursor.End.Column = 1
 		}
 	}
 }

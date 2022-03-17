@@ -1,5 +1,195 @@
 package core
 
+type Movement func(*Editor, Range) Range
+
+func Rows(rows int) Movement {
+	return func(editor *Editor, cursor Range) Range {
+		cursor.Start.Row += rows
+		cursor.End.Row += rows
+		return cursor
+	}
+}
+
+func Columns(cols int) Movement {
+	return func(editor *Editor, cursor Range) Range {
+		cursor.Start.Column += cols
+		cursor.End.Column += cols
+		return cursor
+	}
+}
+
+func Chars(chars int) Movement {
+	return func(editor *Editor, cursor Range) Range {
+		line := editor.Buffer.GetLine(cursor.Start.Row)
+		cursorChrIndex := ColumnToIndex(editor, line, cursor.Start.Column)
+		newCursorChrIndex := cursorChrIndex + chars
+
+		if newCursorChrIndex < 0 && cursor.Start.Row == 0 {
+			cursor.Start.Row--
+			return cursor
+		}
+
+		// Go to the end of the previous line if on start
+		if newCursorChrIndex < 0 {
+			cursor.Start.Row--
+			line = editor.Buffer.GetLine(cursor.Start.Row)
+			cursor.Start.Column = ColumnSpan(editor, line)
+			cursor.End.Row = cursor.Start.Row
+			cursor.End.Column = cursor.Start.Column + 1
+
+			// The +1 is because of the newline
+			return Chars(newCursorChrIndex + 1)(editor, cursor)
+		}
+
+		// Go to start of next line if on end
+		if newCursorChrIndex > len(line) {
+			cursor.Start.Row++
+			cursor.End.Row = cursor.Start.Row
+			cursor.Start.Column = 0
+			cursor.End.Column = 1
+
+			if cursor.Start.Row < editor.Buffer.GetLength() {
+				// The -1 is because of the newline
+				return Chars(newCursorChrIndex - len(line) - 1)(editor, cursor)
+			}
+			return cursor
+		}
+
+		cursor.End.Row = cursor.Start.Row
+		cursor.Start.Column = ColumnSpan(editor, line[:newCursorChrIndex])
+		cursor.End.Column = cursor.Start.Column + 1
+		return cursor
+	}
+}
+
+type goTo struct {
+	originalCursors []Range
+	movement        Movement
+	removeCursors   []*removeCursor
+}
+
+func GoTo(movement Movement) *goTo {
+	return &goTo{movement: movement}
+}
+
+func (g *goTo) Do(e *Editor) {
+	for _, cursor := range e.Cursors {
+		g.originalCursors = append(g.originalCursors, *cursor)
+		*cursor = g.movement(e, *cursor)
+	}
+
+	lastRow := e.Buffer.GetLength() - 1
+	for _, cursor := range e.Cursors {
+		if cursor.Start.Row < 0 ||
+			cursor.End.Row < 0 ||
+			cursor.Start.Row > lastRow ||
+			cursor.End.Row > lastRow {
+				removeCursor := RemoveCursor(cursor)
+				removeCursor.Do(e)
+				g.removeCursors = append(g.removeCursors, removeCursor)
+			}
+		if cursor.Start.Column < 0 {
+			cursor.Start.Column = 0
+		}
+		if cursor.End.Column < 1 {
+			cursor.End.Column = 1
+		}
+	}
+}
+
+func (g *goTo) Undo(e *Editor) {
+	for i := len(g.removeCursors) - 1; i >= 0; i-- {
+		g.removeCursors[i].Undo(e)
+	}
+
+	for i, cursor := range e.Cursors {
+		*cursor = g.originalCursors[i]
+	}
+
+	g.removeCursors = nil
+}
+
+func (g *goTo) Name() string {
+	return "Go To"
+}
+
+type selectUntil struct {
+	originalCursors []Range
+	movement        Movement
+}
+
+func SelectUntil(movement Movement) *selectUntil {
+	return &selectUntil{movement: movement}
+}
+
+func (s *selectUntil) Do(e *Editor) {
+	for _, cursor := range e.Cursors {
+		s.originalCursors = append(s.originalCursors, *cursor)
+		cursor.End = s.movement(e, *cursor).Start
+	}
+
+	lastRow := e.Buffer.GetLength() - 1
+	for _, cursor := range e.Cursors {
+		if cursor.End.Row < 0 ||
+			cursor.End.Row > lastRow {
+				cursor.End.Row = lastRow
+				cursor.End.Column = ColumnSpan(e, e.Buffer.GetLine(lastRow))
+			}
+		if cursor.End.Column < 0 {
+			cursor.End.Column = 0
+		}
+	}
+}
+
+func (s *selectUntil) Undo(e *Editor) {
+	for i, cursor := range e.Cursors {
+		*cursor = s.originalCursors[i]
+	}
+}
+
+func (s *selectUntil) Name() string {
+	return "Select Until"
+}
+
+type expandSelection struct {
+	originalCursors []Range
+	movement        Movement
+}
+
+func ExpandSelection(movement Movement) *expandSelection {
+	return &expandSelection{movement: movement}
+}
+
+func (e *expandSelection) Do(editor *Editor) {
+	for _, cursor := range editor.Cursors {
+		e.originalCursors = append(e.originalCursors, *cursor)
+		end := Range{Start: cursor.End, End: cursor.End}
+		cursor.End = e.movement(editor, end).Start
+	}
+
+	lastRow := editor.Buffer.GetLength() - 1
+	for _, cursor := range editor.Cursors {
+		if cursor.End.Row < 0 ||
+			cursor.End.Row > lastRow {
+				cursor.End.Row = lastRow
+				cursor.End.Column = ColumnSpan(editor, editor.Buffer.GetLine(lastRow))
+			}
+		if cursor.End.Column < 0 {
+			cursor.End.Column = 0
+		}
+	}
+}
+
+func (e *expandSelection) Undo(editor *Editor) {
+	for i, cursor := range editor.Cursors {
+		*cursor = e.originalCursors[i]
+	}
+}
+
+func (e *expandSelection) Name() string {
+	return "Select Until"
+}
+
 type pushCursor struct {
 	_range *Range
 }
@@ -79,261 +269,4 @@ func (p *pushCursorBelow) Undo(editor *Editor) {
 
 func (p *pushCursorBelow) Name() string {
 	return "Push Cursor Below"
-}
-
-type moveColumns struct {
-	cols         int
-	originalCursors map[*Range]Range
-}
-
-func MoveColumns(cols int) *moveColumns {
-	return &moveColumns{cols, make(map[*Range]Range)}
-}
-
-func (m *moveColumns) Do(editor *Editor, cursor *Range) {
-	m.originalCursors[cursor] = *cursor
-
-	cursor.Start.Column += m.cols
-
-	if cursor.Start.Column < 0 {
-		cursor.Start.Column = 0
-	}
-
-	cursor.End.Row = cursor.Start.Row
-	cursor.End.Column = cursor.Start.Column + 1
-}
-
-func (m *moveColumns) Undo(editor *Editor, cursor *Range) {
-	*cursor = m.originalCursors[cursor]
-}
-
-func (m *moveColumns) Name() string {
-	return "Move Columns"
-}
-
-type endMoveColumns struct {
-	cols         int
-	originalCursors map[*Range]Range
-}
-
-func EndMoveColumns(cols int) *endMoveColumns {
-	return &endMoveColumns{cols, make(map[*Range]Range)}
-}
-
-func (e *endMoveColumns) Do(editor *Editor, cursor *Range) {
-	e.originalCursors[cursor] = *cursor
-
-	cursor.End.Column += e.cols
-
-	if cursor.End.Column < 0 {
-		cursor.End.Column = 0
-	}
-}
-
-func (e *endMoveColumns) Undo(editor *Editor, cursor *Range) {
-	*cursor = e.originalCursors[cursor]
-}
-
-func (e *endMoveColumns) Name() string {
-	return "Move Columns"
-}
-
-
-type moveRows struct {
-	rows            int
-	originalCursors map[*Range]Range
-}
-
-func MoveRows(rows int) *moveRows {
-	return &moveRows{rows, make(map[*Range]Range)}
-}
-
-func (m *moveRows) Do(editor *Editor, cursor *Range) {
-	// NOTE: OOB is handled in wrapper
-	m.originalCursors[cursor] = *cursor
-
-	cursor.Start.Row += m.rows
-	cursor.End.Row = cursor.Start.Row
-	cursor.End.Column = cursor.Start.Column + 1
-}
-
-func (m *moveRows) Undo(editor *Editor, cursor *Range) {
-	*cursor = m.originalCursors[cursor]
-}
-
-func (m *moveRows) Name() string {
-	return "Move Rows"
-}
-
-type endMoveRows struct {
-	rows            int
-	originalCursors map[*Range]Range
-}
-
-func EndMoveRows(rows int) *endMoveRows {
-	return &endMoveRows{rows, make(map[*Range]Range)}
-}
-
-func (e *endMoveRows) Do(editor *Editor, cursor *Range) {
-	// NOTE: OOB is handled in wrapper
-	e.originalCursors[cursor] = *cursor
-
-	cursor.End.Row += e.rows
-}
-
-func (e *endMoveRows) Undo(editor *Editor, cursor *Range) {
-	*cursor = e.originalCursors[cursor]
-}
-
-func (e *endMoveRows) Name() string {
-	return "Move Rows"
-}
-
-type moveChars struct {
-	chars           int
-	originalCursors map[*Range]Range
-}
-
-func MoveChars(chars int) *moveChars {
-	return &moveChars{chars, make(map[*Range]Range)}
-}
-
-func (m *moveChars) Do(editor *Editor, cursor *Range) {
-	m.originalCursors[cursor] = *cursor
-
-	line := editor.Buffer.GetLine(cursor.Start.Row)
-
-	// The column in which each character/rune of the line is
-	cursorChrIndex := ColumnToIndex(editor, line, cursor.Start.Column)
-	newCursorChrIndex := cursorChrIndex + m.chars
-
-	// OOB, new position is before start of file
-	if newCursorChrIndex < 0 && cursor.Start.Row == 0 {
-		cursor.Start.Row--
-		return
-	}
-
-	// Go to the end of the previous line if on start
-	if newCursorChrIndex < 0 {
-		cursor.Start.Row--
-		line = editor.Buffer.GetLine(cursor.Start.Row)
-		cursor.Start.Column = ColumnSpan(editor, line)
-		cursor.End.Row = cursor.Start.Row
-		cursor.End.Column = cursor.Start.Column + 1
-		return
-	}
-
-	// Go to start of next line if on end
-	if newCursorChrIndex > len(line) {
-		cursor.Start.Row++
-		cursor.End.Row = cursor.Start.Row
-		cursor.Start.Column = 0
-		cursor.End.Column = 1
-		return
-	}
-
-	cursor.End.Row = cursor.Start.Row
-	cursor.Start.Column = ColumnSpan(editor, line[:newCursorChrIndex])
-	cursor.End.Column = cursor.Start.Column + 1
-}
-
-func (m *moveChars) Undo(editor *Editor, cursor *Range) {
-	*cursor = m.originalCursors[cursor]
-}
-
-func (m *moveChars) Name() string {
-	return "Move Chars"
-}
-
-type endMoveChars struct {
-	chars           int
-	originalCursors map[*Range]Range
-}
-
-func EndMoveChars(chars int) *endMoveChars {
-	return &endMoveChars{chars, make(map[*Range]Range)}
-}
-
-func (e *endMoveChars) Do(editor *Editor, cursor *Range) {
-	e.originalCursors[cursor] = *cursor
-
-	line := editor.Buffer.GetLine(cursor.Start.Row)
-
-	// The column in which each character/rune of the line is
-	cursorChrIndex := ColumnToIndex(editor, line, cursor.End.Column)
-	newCursorChrIndex := cursorChrIndex + e.chars
-
-	// OOB, new position is before start of file
-	if newCursorChrIndex < 0 && cursor.End.Row == 0 {
-		cursor.End.Row--
-		return
-	}
-
-	// Go to the end of the previous line if on start
-	if newCursorChrIndex < 0 {
-		cursor.End.Row--
-		line = editor.Buffer.GetLine(cursor.End.Row)
-		cursor.End.Column = ColumnSpan(editor, line)
-		return
-	}
-
-	// Go to start of next line if on end
-	if newCursorChrIndex > len(line) {
-		cursor.End.Row++
-		cursor.End.Column = 1
-		return
-	}
-
-	cursor.End.Column = ColumnSpan(editor, line[:newCursorChrIndex])
-}
-
-func (e *endMoveChars) Undo(editor *Editor, cursor *Range) {
-	*cursor = e.originalCursors[cursor]
-}
-
-func (e *endMoveChars) Name() string {
-	return "Move Chars"
-}
-
-type boundToLine struct {
-	originalCursors map[*Range]Range
-}
-
-func BoundToLine() *boundToLine {
-	return &boundToLine{originalCursors: make(map[*Range]Range)}
-}
-
-func (b *boundToLine) Do(editor *Editor, cursor *Range) {
-	b.originalCursors[cursor] = *cursor
-
-	startLine := editor.Buffer.GetLine(cursor.Start.Row)
-	startColumnSpan := ColumnSpan(editor, startLine)
-
-	var endColumnSpan int
-	if cursor.Start.Row != cursor.End.Row {
-		endLine := editor.Buffer.GetLine(cursor.End.Row)
-		endColumnSpan = ColumnSpan(editor, endLine)
-	} else {
-		endColumnSpan = startColumnSpan
-	}
-
-	cursor.Start.Column = bound(cursor.Start.Column, 0, startColumnSpan)
-	cursor.End.Column = bound(cursor.End.Column, 0, endColumnSpan + 1)
-}
-
-func (b *boundToLine) Undo(editor *Editor, cursor *Range) {
-	*cursor = b.originalCursors[cursor]
-}
-
-func (b *boundToLine) Name() string {
-	return "Bound To Line"
-}
-
-func bound(value, min, max int) int {
-	if value < min {
-		return min
-	} else if value > max {
-		return max
-	}
-	return value
 }

@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"runtime"
+	"runtime/pprof"
 	"strings"
 	"unicode"
 
@@ -160,6 +162,9 @@ func normalMode() {
 		case 'v':
 			visualMode()
 			break
+		case 'm':
+			memoryProfile()
+			break
 		case 'i':
 			editor.MarkUndo()
 			insertMode()
@@ -244,9 +249,11 @@ func insertMode() {
 			editor.CursorDo(core.Insert(insertion))
 			return
 		case input.BACKSPACE:
-			insertion = insertion[:len(insertion)-1]
-			editor.CursorDo(core.MoveChars(-1))
-			editor.CursorDo(core.Delete())
+			if len(insertion) > 0 {
+				insertion = insertion[:len(insertion)-1]
+				editor.Do(core.GoTo(core.Chars(-1)))
+				editor.CursorDo(core.Delete())
+			}
 			break
 		default:
 			if unicode.IsGraphic(event.Chr) || event.Chr == '\t' || event.Chr == '\n' {
@@ -261,8 +268,18 @@ func insertMode() {
 	}
 }
 
+func memoryProfile() {
+	file, _ := os.Create("memprof")
+	defer file.Close()
+
+	runtime.GC()
+	pprof.WriteHeapProfile(file)
+}
+
 func main() {
-	editor = core.Editor{Buffer: &core.Buffer{Lines: core.ToRune([]string{"aaaa", "bbbb", "cccc"})}, Config: core.EditorConfig{Tabsize: 4}}
+	buffer := core.NewBuffer()
+	buffer.Current = buffer.Current.Insert(0, [][]rune{{'a', 'b', 'c'}})
+	editor = core.Editor{Buffer: buffer, Config: core.EditorConfig{Tabsize: 4}}
 	renderer = hexes.New(os.Stdin, out)
 	listener = input.New(in)
 	renderer.Start()

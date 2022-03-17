@@ -33,7 +33,7 @@ func (c *cursorEditWrapper) Do(e *Editor) {
 	// inserting a line messes with the location of the cursors
 	// following the insert.
 	for i := len(c.sortedCursors) - 1; i >= 0; i-- {
-		c.cursorEdit.Do(e, c.sortedCursors[i])
+		c.cursorEdit.Do(e, c.sortedCursors[i], i)
 	}
 
 	lastRow := e.Buffer.GetLength() - 1
@@ -54,8 +54,8 @@ func (c *cursorEditWrapper) Undo(e *Editor) {
 		c.removeCursors[i].Undo(e)
 	}
 
-	for _, cursor := range c.sortedCursors { 
-		c.cursorEdit.Undo(e, cursor)
+	for i, cursor := range c.sortedCursors {
+		c.cursorEdit.Undo(e, cursor, i)
 	}
 
 	c.removeCursors = nil
@@ -66,23 +66,23 @@ func (c *cursorEditWrapper) Name() string {
 }
 
 type CursorEdit interface {
-	Do(editor *Editor, cursor *Range)
-	Undo(editor *Editor, cursor *Range)
+	Do(editor *Editor, cursor *Range, index int)
+	Undo(editor *Editor, cursor *Range, index int)
 	Name() string
 }
 
 type singleSplit struct {
-	originalCursors map[*Range]Range
+	originalCursors []Range
 	row             int
 	column          int
 }
 
 func SingleSplit(row, column int) *singleSplit {
-	return &singleSplit{make(map[*Range]Range), row, column}
+	return &singleSplit{nil, row, column}
 }
 
 func (s *singleSplit) Do(editor *Editor) {
-	copyCursors(editor, s.originalCursors)
+	s.originalCursors = copyCursors(editor)
 
 	line := editor.Buffer.GetLine(s.row)
 	lineIndex := LocationToIndex(editor, Location{s.row, s.column})
@@ -107,7 +107,7 @@ func (s *singleSplit) Do(editor *Editor) {
 }
 
 func (s *singleSplit) Undo(editor *Editor) {
-	restoreCursors(s.originalCursors)
+	restoreCursors(editor, s.originalCursors)
 
 	line1 := editor.Buffer.GetLine(s.row)
 	line2 := editor.Buffer.GetLine(s.row+1)
@@ -120,33 +120,41 @@ func (s *singleSplit) Name() string {
 	return "Single Split"
 }
 
-func copyCursors(editor *Editor, dest map[*Range]Range) {
-	for _, cursor := range editor.Cursors {
-		dest[cursor] = *cursor
+func copyCursors(editor *Editor) []Range {
+	cursors := make([]Range, len(editor.Cursors))
+	for i, cursor := range editor.Cursors {
+		cursors[i] = *cursor
 	}
+	return cursors
 }
 
-func restoreCursors(src map[*Range]Range) {
-	for cursor, originalValue := range src {
-		*cursor = originalValue
+func restoreCursors(editor *Editor, src []Range) {
+	for i, cursor := range src {
+		*editor.Cursors[i] = cursor
 	}
 }
 
 type split struct {
-	singleSplits map[*Range]*singleSplit
-}
-func Split() *split {
-	return &split{make(map[*Range]*singleSplit)}
+	singleSplits []*singleSplit
 }
 
-func (s *split) Do(editor *Editor, cursor *Range) {
+func Split() *split {
+	return &split{}
+}
+
+func (s *split) Do(editor *Editor, cursor *Range, index int) {
+	// First one to be executed
+	if index == len(editor.Cursors) - 1 {
+		s.singleSplits = make([]*singleSplit, len(editor.Cursors))
+	}
+
 	singleSplit := SingleSplit(cursor.Start.Row, cursor.Start.Column)
-	s.singleSplits[cursor] = singleSplit
+	s.singleSplits[index] = singleSplit
 	singleSplit.Do(editor)
 }
 
-func (s *split) Undo(editor *Editor, cursor *Range) {
-	s.singleSplits[cursor].Undo(editor)
+func (s *split) Undo(editor *Editor, cursor *Range, index int) {
+	s.singleSplits[index].Undo(editor)
 }
 
 func (s *split) Name() string {
@@ -155,7 +163,7 @@ func (s *split) Name() string {
 
 // Used by insertInLine
 type singleInsertInLine struct {
-	originalCursors map[*Range]Range
+	originalCursors []Range
 	originalLine    []rune
 	insertion       []rune
 	row             int
@@ -163,7 +171,7 @@ type singleInsertInLine struct {
 }
 
 func SingleInsertInLine(insertion []rune, row, column int) *singleInsertInLine {
-	return &singleInsertInLine{make(map[*Range]Range),nil, insertion, row, column}
+	return &singleInsertInLine{nil,nil, insertion, row, column}
 }
 
 func Join(parts... []rune) []rune {
@@ -182,7 +190,7 @@ func Join(parts... []rune) []rune {
 }
 
 func (s *singleInsertInLine) Do(editor *Editor) {
-	copyCursors(editor, s.originalCursors)
+	s.originalCursors = copyCursors(editor)
 
 	line := editor.Buffer.GetLine(s.row)
 	s.originalLine = line
@@ -207,7 +215,7 @@ func (s *singleInsertInLine) Do(editor *Editor) {
 
 func (s *singleInsertInLine) Undo(editor *Editor) {
 	editor.Buffer.ChangeLine(s.row, s.originalLine)
-	restoreCursors(s.originalCursors)
+	restoreCursors(editor, s.originalCursors)
 }
 
 func (s *singleInsertInLine) Name() string {
@@ -216,25 +224,25 @@ func (s *singleInsertInLine) Name() string {
 
 // Used by insert
 type insertInLine struct {
-	singleInsertInLines map[*Range]*singleInsertInLine
+	singleInsertInLines []*singleInsertInLine
 	insertion           []rune
 }
 
 func InsertInLine(insertion []rune) *insertInLine {
-	return &insertInLine{
-		make(map[*Range]*singleInsertInLine),
-		insertion,
-	}
+	return &insertInLine{nil, insertion}
 }
 
-func (s *insertInLine) Do(editor *Editor, cursor *Range) {
+func (s *insertInLine) Do(editor *Editor, cursor *Range, index int) {
+	if index == len(editor.Cursors) - 1 {
+		s.singleInsertInLines = make([]*singleInsertInLine, len(editor.Cursors))
+	}
 	singleInsertInLine := SingleInsertInLine(s.insertion, cursor.Start.Row, cursor.Start.Column)
-	s.singleInsertInLines[cursor] = singleInsertInLine
+	s.singleInsertInLines[index] = singleInsertInLine
 	singleInsertInLine.Do(editor)
 }
 
-func (s *insertInLine) Undo(editor *Editor, cursor *Range) {
-	s.singleInsertInLines[cursor].Undo(editor)
+func (s *insertInLine) Undo(editor *Editor, cursor *Range, index int) {
+	s.singleInsertInLines[index].Undo(editor)
 }
 
 func (s *insertInLine) Name() string {
@@ -268,15 +276,15 @@ func splitRune(str []rune, div rune) (output [][]rune) {
 	return output
 }
 
-func (s *insert) Do(editor *Editor, cursor *Range) {
+func (s *insert) Do(editor *Editor, cursor *Range, index int) {
 	for _, edit := range s.edits {
-		edit.Do(editor, cursor)
+		edit.Do(editor, cursor, index)
 	}
 }
 
-func (s *insert) Undo(editor *Editor, cursor *Range) {
+func (s *insert) Undo(editor *Editor, cursor *Range, index int) {
 	for i := len(s.edits) - 1; i >= 0; i-- {
-		s.edits[i].Undo(editor, cursor)
+		s.edits[i].Undo(editor, cursor, index)
 	}
 }
 
@@ -285,17 +293,17 @@ func (s *insert) Name() string {
 }
 
 type singleDelete struct {
-	area          Range
+	area            Range
 	originalLines   [][]rune
-	originalCursors map[*Range]Range
+	originalCursors []Range
 }
 
 func SingleDelete(_range Range) *singleDelete {
-	return &singleDelete{_range, nil, make(map[*Range]Range)}
+	return &singleDelete{_range, nil, nil}
 }
 
 func (s *singleDelete) Do(editor *Editor) {
-	copyCursors(editor, s.originalCursors)
+	s.originalCursors = copyCursors(editor)
 
 	area := s.area
 
@@ -370,7 +378,7 @@ func (s *singleDelete) Undo(editor *Editor) {
 		i++
 	}
 
-	restoreCursors(s.originalCursors)
+	restoreCursors(editor, s.originalCursors)
 }
 
 func (s *singleDelete) Name() string {
@@ -379,28 +387,32 @@ func (s *singleDelete) Name() string {
 
 
 type _delete struct {
-	singleDeletes   map[*Range]*singleDelete
-	originalCursors map[*Range]Range
+	singleDeletes   []*singleDelete
+	originalCursors []Range
 }
 
 func Delete() *_delete {
-	return &_delete{make(map[*Range]*singleDelete), make(map[*Range]Range)}
+	return &_delete{}
 }
 
-func (d *_delete) Do(editor *Editor, cursor *Range) {
+func (d *_delete) Do(editor *Editor, cursor *Range, index int) {
+	if index == len(editor.Cursors) - 1 {
+		d.originalCursors = make([]Range, len(editor.Cursors))
+		d.singleDeletes = make([]*singleDelete, len(editor.Cursors))
+	}
 	singleDelete := SingleDelete(*cursor)
 
-	d.singleDeletes[cursor] = singleDelete
-	d.originalCursors[cursor] = *cursor
+	d.singleDeletes[index] = singleDelete
+	d.originalCursors[index] = *cursor
 
 	singleDelete.Do(editor)
 	cursor.End.Row = cursor.Start.Row
 	cursor.End.Column = cursor.Start.Column + 1
 }
 
-func (d *_delete) Undo(editor *Editor, cursor *Range) {
-	d.singleDeletes[cursor].Undo(editor)
-	*cursor = d.originalCursors[cursor]
+func (d *_delete) Undo(editor *Editor, cursor *Range, index int) {
+	d.singleDeletes[index].Undo(editor)
+	*cursor = d.originalCursors[index]
 }
 
 func (d *_delete) Name() string {

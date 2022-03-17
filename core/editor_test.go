@@ -33,8 +33,9 @@ func TestSortCursors(t *testing.T) {
 }
 
 func TestUndoLimit(t *testing.T) {
-	b := Buffer{Lines: ToRune([]string{"0000", "1111", "2222", "3333"})}
-	e := Editor{Buffer: &b}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune([]string{"0000", "1111", "2222", "3333"}))
+	e := Editor{Buffer: b}
 	e.Undo()
 	e.Undo()
 	e.Undo()
@@ -46,8 +47,9 @@ func TestUndo(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b}
 
 	e.Do(
 		PushCursor(&Range{Location{1,2},Location{1,3}}),
@@ -57,24 +59,25 @@ func TestUndo(t *testing.T) {
 
 	expected := []string{"0000", "11", "11", "2222", "3333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 
 	e.Do(UndoMarker())
 	e.CursorDo(Insert([]rune("!")))
 	expected = []string{"0000", "11!11", "2222", "3333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestRedo(t *testing.T) {
-	b := Buffer{Lines: ToRune([]string{"0000", "1111", "2222", "3333"})}
-	e := Editor{Buffer: &b}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune([]string{"0000", "1111", "2222", "3333"}))
+	e := Editor{Buffer: b}
 	e.Redo()
 	e.Redo()
 	e.Redo()

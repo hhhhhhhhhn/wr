@@ -1,6 +1,6 @@
 module github.com/hhhhhhhhhn/wr
 
-go 1.17
+go 1.18
 
 require (
 	github.com/hhhhhhhhhn/hexes v0.2.1
@@ -10,6 +10,7 @@ require (
 
 require (
 	github.com/davecgh/go-spew v1.1.0 // indirect
+	github.com/hhhhhhhhhn/rope v0.0.0-20220317205148-9d991d144944 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	golang.org/x/text v0.3.7 // indirect

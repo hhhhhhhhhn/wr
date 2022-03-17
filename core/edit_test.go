@@ -10,8 +10,9 @@ func TestSplit(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b}
 
 	e.Do(
 		UndoMarker(),
@@ -26,10 +27,10 @@ func TestSplit(t *testing.T) {
 
 	expected := []string{"0000", "11", "11", "222", "2", "3333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestSplitOOBMultiline(t *testing.T) {
@@ -37,8 +38,9 @@ func TestSplitOOBMultiline(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b}
 
 	e.Do(
 		UndoMarker(),
@@ -50,10 +52,10 @@ func TestSplitOOBMultiline(t *testing.T) {
 
 	expected := []string{"0000", "1", "111", "2222", "3333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestSplitOOB(t *testing.T) {
@@ -61,8 +63,9 @@ func TestSplitOOB(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b}
 
 	e.Do(
 		UndoMarker(),
@@ -77,10 +80,10 @@ func TestSplitOOB(t *testing.T) {
 
 	expected := []string{"0000", "1111", "", "2222", "", "3333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestSplitEOF(t *testing.T) {
@@ -88,8 +91,9 @@ func TestSplitEOF(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b}
 
 	e.Do(
 		UndoMarker(),
@@ -107,10 +111,10 @@ func TestSplitEOF(t *testing.T) {
 
 	expected := []string{"0000", "1", "111", "2" ,"222", "3", "333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestSplitCursors(t *testing.T) {
@@ -118,8 +122,9 @@ func TestSplitCursors(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
@@ -147,11 +152,11 @@ func TestSplitCursors(t *testing.T) {
 		{Location{7,0},Location{7,3}},
 	}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 	assert.Equal(t, expectedCursors, e.Cursors)
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestSingleInsertInLine(t *testing.T) {
@@ -159,8 +164,9 @@ func TestSingleInsertInLine(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
@@ -172,10 +178,10 @@ func TestSingleInsertInLine(t *testing.T) {
 
 	expected := []string{"0000", "11!11", "2222", "3333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestInsertInLine(t *testing.T) {
@@ -183,8 +189,9 @@ func TestInsertInLine(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
@@ -205,11 +212,11 @@ func TestInsertInLine(t *testing.T) {
 		{Location{2,9},Location{2,10}},
 	}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 	assert.Equal(t, expectedCursors, e.Cursors)
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestInsert(t *testing.T) {
@@ -217,8 +224,9 @@ func TestInsert(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
@@ -233,10 +241,10 @@ func TestInsert(t *testing.T) {
 
 	expected := []string{"0000", "11!", "!11", "222!", "!2", "3333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 
 }
 func TestInsertOOB(t *testing.T) {
@@ -244,8 +252,9 @@ func TestInsertOOB(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
@@ -260,10 +269,10 @@ func TestInsertOOB(t *testing.T) {
 
 	expected := []string{"0000", "1111!", "!", "2222!", "!", "3333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestSingleDelete(t *testing.T) {
@@ -271,8 +280,9 @@ func TestSingleDelete(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
@@ -281,10 +291,10 @@ func TestSingleDelete(t *testing.T) {
 
 	expected := []string{"0000", "111", "2222", "3333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestSingleDeleteMultiline(t *testing.T) {
@@ -292,8 +302,9 @@ func TestSingleDeleteMultiline(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
@@ -302,10 +313,10 @@ func TestSingleDeleteMultiline(t *testing.T) {
 
 	expected := []string{"0000", "122", "3333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestSingleDeleteJoin(t *testing.T) {
@@ -313,8 +324,9 @@ func TestSingleDeleteJoin(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
@@ -323,10 +335,10 @@ func TestSingleDeleteJoin(t *testing.T) {
 
 	expected := []string{"0000", "13333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestSingleDeleteLastLine(t *testing.T) {
@@ -334,8 +346,9 @@ func TestSingleDeleteLastLine(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
@@ -344,10 +357,10 @@ func TestSingleDeleteLastLine(t *testing.T) {
 
 	expected := []string{"0000", "1111", "2222", "3333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestSingleDeleteCursors(t *testing.T) {
@@ -355,8 +368,9 @@ func TestSingleDeleteCursors(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
@@ -376,11 +390,11 @@ func TestSingleDeleteCursors(t *testing.T) {
 		{Location{1,3},Location{1,4}},
 	}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 	assert.Equal(t, expectedCursors, e.Cursors)
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestDelete(t *testing.T) {
@@ -388,8 +402,9 @@ func TestDelete(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
@@ -404,10 +419,10 @@ func TestDelete(t *testing.T) {
 
 	expected := []string{"0000", "111", "222", "3333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestDeleteMultiline(t *testing.T) {
@@ -415,8 +430,9 @@ func TestDeleteMultiline(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
@@ -428,10 +444,10 @@ func TestDeleteMultiline(t *testing.T) {
 
 	expected := []string{"0000", "112", "3333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestDeleteJoinLines(t *testing.T) {
@@ -439,8 +455,9 @@ func TestDeleteJoinLines(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
@@ -452,10 +469,10 @@ func TestDeleteJoinLines(t *testing.T) {
 
 	expected := []string{"0000", "11113333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestDeleteJoinLinesMultiline(t *testing.T) {
@@ -463,14 +480,15 @@ func TestDeleteJoinLinesMultiline(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
 	)
 	e.Do(
-		PushCursor(&Range{Location{0,1},Location{0,5}}),
+		PushCursor(&Range{Location{0, 1},Location{0, 5}}),
 	)
 	e.Do(
 		PushCursor(&Range{Location{1,1},Location{1,5}}),
@@ -485,10 +503,10 @@ func TestDeleteJoinLinesMultiline(t *testing.T) {
 
 	expected := []string{"0123"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
 func TestDeleteOOB(t *testing.T) {
@@ -496,8 +514,9 @@ func TestDeleteOOB(t *testing.T) {
 	linesCopy := make([]string, len(lines))
 	copy(linesCopy, lines)
 
-	b := Buffer{Lines: ToRune(lines)}
-	e := Editor{Buffer: &b, Config: EditorConfig{Tabsize: 4}}
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
 
 	e.Do(
 		UndoMarker(),
@@ -509,8 +528,8 @@ func TestDeleteOOB(t *testing.T) {
 
 	expected := []string{"0000", "11113333"}
 
-	assert.Equal(t, ToRune(expected), e.Buffer.Lines)
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
 
 	e.Undo()
-	assert.Equal(t, ToRune(linesCopy), e.Buffer.Lines)
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }

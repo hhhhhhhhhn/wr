@@ -39,6 +39,14 @@ func (b *Buffer) GetLength() int {
 	return b.Current.Length()
 }
 
+func (b *Buffer) Backup(destination Version) {
+	b.Versions[destination] = b.Current
+}
+
+func (b *Buffer) Restore(source Version) {
+	b.Current = b.Versions[source]
+}
+
 func NewBuffer() *Buffer {
 	return &Buffer{
 		Current: NewRope([][]rune{}, DefaultSettings),

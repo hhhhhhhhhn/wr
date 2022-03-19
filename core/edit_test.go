@@ -13,10 +13,8 @@ func TestSplit(t *testing.T) {
 	b := NewBuffer()
 	b.Current = b.Current.Insert(0, ToRune(lines))
 	e := Editor{Buffer: b}
+	e.MarkUndo()
 
-	e.Do(
-		UndoMarker(),
-	)
 	e.Do(
 		PushCursor(&Range{Location{1,2},Location{1,3}}),
 	)

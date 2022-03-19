@@ -2,15 +2,23 @@ package core
 
 import (
 	"sort"
+	"math/rand"
+
 	rw "github.com/mattn/go-runewidth"
 )
 
+type Cursor struct {
+	Range
+	Registers []string
+}
+
 type Editor struct {
-	Buffer       *Buffer
-	History      []Edit
-	HistoryIndex int
-	Cursors      []*Range
-	Config       EditorConfig
+	Buffer          *Buffer
+	History         []Version
+	HistoryIndex    int
+	Cursors         []*Cursor
+	CursorsVersions map[Version][]Cursor
+	Config          EditorConfig
 }
 
 type EditorConfig struct {
@@ -28,57 +36,44 @@ type Location struct {
 	Column int
 }
 
-func (e *Editor) Do(edit Edit) {
-	e.History = append(e.History[:e.HistoryIndex], edit)
-	e.HistoryIndex++
-	edit.Do(e)
-}
-
 func (e *Editor) Undo() {
-	for {
+	if e.HistoryIndex > 0 {
 		e.HistoryIndex--
-		if e.HistoryIndex < 0 {
-			e.Redo()
-			break
-		}
-		e.History[e.HistoryIndex].Undo(e)
-		if e.History[e.HistoryIndex].Name() == "Undo Marker" {
-			break
-		}
 	}
-}
-
-// Undos latest Edit, ignoring markers and such
-func (e *Editor) SingleUndo() {
-	if e.HistoryIndex == 0 {
-		return
-	}
-	e.HistoryIndex--
-	e.History[e.HistoryIndex].Undo(e)
+	version := e.History[e.HistoryIndex]
+	e.Buffer.Restore(version)
+	e.Cursors = restoreCursors(e.CursorsVersions[version])
 }
 
 func (e *Editor) Redo() {
-	for {
+	if e.HistoryIndex < len(e.History) - 1 {
 		e.HistoryIndex++
-		if e.HistoryIndex > len(e.History) - 1 {
-			e.HistoryIndex = len(e.History)
-			break
-		}
-		e.History[e.HistoryIndex].Do(e)
-		if e.History[e.HistoryIndex].Name() == "Undo Marker" {
-			break
-		}
 	}
+	e.Buffer.Restore(e.History[e.HistoryIndex])
 }
 
-var markUndo = &undoMarker{}
 // Marks the start of an action to be undone
 func (e *Editor) MarkUndo() {
-	e.Do(markUndo)
+	newVersion := rand.Int()
+	e.Buffer.Backup(newVersion)
+	e.CursorsVersions[newVersion] = backupCursors(e.Cursors)
+	e.History = append(e.History[:e.HistoryIndex+1], newVersion)
 }
 
-func (e *Editor) CursorDo(cursorEdit CursorEdit) {
-	e.Do(wrapCursorEdit(cursorEdit))
+func backupCursors(cursors []*Cursor) []Cursor {
+	backup := make([]Cursor, len(cursors))
+	for i, cursor := range cursors {
+		backup[i] = *cursor
+	}
+	return backup
+}
+
+func restoreCursors(cursors []Cursor) []*Cursor {
+	restored := make([]*Cursor, len(cursors))
+	for i, cursor := range cursors {
+		restored[i] = &cursor
+	}
+	return restored
 }
 
 func RuneWidth(editor *Editor, chr rune) int {
@@ -120,8 +115,8 @@ func ColumnSpan(editor *Editor, line []rune) (column int) {
 	return column
 }
 
-func SortCursors(cursors []*Range) (sortedCursors []*Range) {
-	sortedCursors = make([]*Range, len(cursors))
+func SortCursors(cursors []*Cursor) (sortedCursors []*Cursor) {
+	sortedCursors = make([]*Cursor, len(cursors))
 	copy(sortedCursors, cursors)
 	sort.Slice(sortedCursors, func(i, j int) bool {
 		if sortedCursors[i].Start.Row == sortedCursors[j].Start.Row {

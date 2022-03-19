@@ -1,9 +1,9 @@
 package core
 
-type Movement func(*Editor, Range) Range
+type Movement func(*Editor, Cursor) Cursor
 
 func Rows(rows int) Movement {
-	return func(editor *Editor, cursor Range) Range {
+	return func(editor *Editor, cursor Cursor) Cursor {
 		cursor.Start.Row += rows
 		cursor.End.Row += rows
 		return cursor
@@ -11,7 +11,7 @@ func Rows(rows int) Movement {
 }
 
 func Columns(cols int) Movement {
-	return func(editor *Editor, cursor Range) Range {
+	return func(editor *Editor, cursor Cursor) Cursor {
 		cursor.Start.Column += cols
 		cursor.End.Column += cols
 		return cursor
@@ -19,7 +19,7 @@ func Columns(cols int) Movement {
 }
 
 func Chars(chars int) Movement {
-	return func(editor *Editor, cursor Range) Range {
+	return func(editor *Editor, cursor Cursor) Cursor {
 		line := editor.Buffer.GetLine(cursor.Start.Row)
 		cursorChrIndex := ColumnToIndex(editor, line, cursor.Start.Column)
 		newCursorChrIndex := cursorChrIndex + chars
@@ -62,55 +62,23 @@ func Chars(chars int) Movement {
 	}
 }
 
-type goTo struct {
-	originalCursors []Range
-	movement        Movement
-	removeCursors   []*removeCursor
-}
+func GoTo(movement Movement) Edit {
+	return func(editor *Editor) {
+		for _, cursor := range editor.Cursors {
+			*cursor = movement(editor, *cursor)
+		}
 
-func GoTo(movement Movement) *goTo {
-	return &goTo{movement: movement}
-}
+		removeOOBCursors(editor)
 
-func (g *goTo) Do(e *Editor) {
-	for _, cursor := range e.Cursors {
-		g.originalCursors = append(g.originalCursors, *cursor)
-		*cursor = g.movement(e, *cursor)
-	}
-
-	lastRow := e.Buffer.GetLength() - 1
-	for _, cursor := range e.Cursors {
-		if cursor.Start.Row < 0 ||
-			cursor.End.Row < 0 ||
-			cursor.Start.Row > lastRow ||
-			cursor.End.Row > lastRow {
-				removeCursor := RemoveCursor(cursor)
-				removeCursor.Do(e)
-				g.removeCursors = append(g.removeCursors, removeCursor)
+		for _, cursor := range editor.Cursors {
+			if cursor.Start.Column < 0 {
+				cursor.Start.Column = 0
 			}
-		if cursor.Start.Column < 0 {
-			cursor.Start.Column = 0
-		}
-		if cursor.End.Column < 1 {
-			cursor.End.Column = 1
+			if cursor.End.Column < 1 {
+				cursor.End.Column = 1
+			}
 		}
 	}
-}
-
-func (g *goTo) Undo(e *Editor) {
-	for i := len(g.removeCursors) - 1; i >= 0; i-- {
-		g.removeCursors[i].Undo(e)
-	}
-
-	for i, cursor := range e.Cursors {
-		*cursor = g.originalCursors[i]
-	}
-
-	g.removeCursors = nil
-}
-
-func (g *goTo) Name() string {
-	return "Go To"
 }
 
 type selectUntil struct {
@@ -118,37 +86,25 @@ type selectUntil struct {
 	movement        Movement
 }
 
-func SelectUntil(movement Movement) *selectUntil {
-	return &selectUntil{movement: movement}
-}
 
-func (s *selectUntil) Do(e *Editor) {
-	for _, cursor := range e.Cursors {
-		s.originalCursors = append(s.originalCursors, *cursor)
-		cursor.End = s.movement(e, *cursor).Start
-	}
+func SelectUntil(movement Movement) Edit {
+	return func(editor *Editor) {
+		for _, cursor := range editor.Cursors {
+			cursor.End = movement(editor, *cursor).Start
+		}
 
-	lastRow := e.Buffer.GetLength() - 1
-	for _, cursor := range e.Cursors {
-		if cursor.End.Row < 0 ||
-			cursor.End.Row > lastRow {
-				cursor.End.Row = lastRow
-				cursor.End.Column = ColumnSpan(e, e.Buffer.GetLine(lastRow))
+		lastRow := editor.Buffer.GetLength() - 1
+		for _, cursor := range editor.Cursors {
+			if cursor.End.Row < 0 ||
+				cursor.End.Row > lastRow {
+					cursor.End.Row = lastRow
+					cursor.End.Column = ColumnSpan(editor, editor.Buffer.GetLine(lastRow))
+				}
+			if cursor.End.Column < 0 {
+				cursor.End.Column = 0
 			}
-		if cursor.End.Column < 0 {
-			cursor.End.Column = 0
 		}
 	}
-}
-
-func (s *selectUntil) Undo(e *Editor) {
-	for i, cursor := range e.Cursors {
-		*cursor = s.originalCursors[i]
-	}
-}
-
-func (s *selectUntil) Name() string {
-	return "Select Until"
 }
 
 type expandSelection struct {
@@ -156,117 +112,48 @@ type expandSelection struct {
 	movement        Movement
 }
 
-func ExpandSelection(movement Movement) *expandSelection {
-	return &expandSelection{movement: movement}
-}
+func ExpandSelection(movement Movement) Edit {
+	return func(editor *Editor) {
+		for _, cursor := range editor.Cursors {
+			end := Range{Start: cursor.End, End: cursor.End}
+			cursor.End = movement(editor, Cursor{Range: end}).Start
+		}
 
-func (e *expandSelection) Do(editor *Editor) {
-	for _, cursor := range editor.Cursors {
-		e.originalCursors = append(e.originalCursors, *cursor)
-		end := Range{Start: cursor.End, End: cursor.End}
-		cursor.End = e.movement(editor, end).Start
-	}
-
-	lastRow := editor.Buffer.GetLength() - 1
-	for _, cursor := range editor.Cursors {
-		if cursor.End.Row < 0 ||
-			cursor.End.Row > lastRow {
-				cursor.End.Row = lastRow
-				cursor.End.Column = ColumnSpan(editor, editor.Buffer.GetLine(lastRow))
+		lastRow := editor.Buffer.GetLength() - 1
+		for _, cursor := range editor.Cursors {
+			if cursor.End.Row < 0 ||
+				cursor.End.Row > lastRow {
+					cursor.End.Row = lastRow
+					cursor.End.Column = ColumnSpan(editor, editor.Buffer.GetLine(lastRow))
+				}
+			if cursor.End.Column < 0 {
+				cursor.End.Column = 0
 			}
-		if cursor.End.Column < 0 {
-			cursor.End.Column = 0
 		}
 	}
 }
 
-func (e *expandSelection) Undo(editor *Editor) {
-	for i, cursor := range editor.Cursors {
-		*cursor = e.originalCursors[i]
+func PushCursor(cursor *Cursor) Edit {
+	return func(editor *Editor) {
+		editor.Cursors = append(editor.Cursors, cursor)
 	}
 }
 
-func (e *expandSelection) Name() string {
-	return "Select Until"
-}
-
-type pushCursor struct {
-	_range *Range
-}
-
-func PushCursor(_range *Range) *pushCursor {
-	return &pushCursor{_range}
-}
-
-func (p *pushCursor) Do(e *Editor) {
-	e.Cursors = append(e.Cursors, p._range)
-}
-
-func (p *pushCursor) Undo(e *Editor) {
-	e.Cursors = e.Cursors[:len(e.Cursors) - 1]
-}
-
-func (p *pushCursor) Name() string {
-	return "Push Cursor"
-}
-
-type removeCursor struct {
-	removedCursor   *Range
-	originalCursors []*Range
-}
-
-func RemoveCursor(cursor *Range) *removeCursor {
-	return &removeCursor{removedCursor: cursor, originalCursors: []*Range{}}
-}
-
-func (r *removeCursor) Do(e *Editor) {
-	newCursors := []*Range{}
-	for _, cursor := range e.Cursors {
-		if cursor != r.removedCursor {
-			newCursors = append(newCursors, cursor)
-		}
-		r.originalCursors = append(r.originalCursors, cursor)
+func RemoveCursor(removedCursor *Cursor) Edit {
+	return func(editor *Editor) {
+		editor.Cursors = filter(editor.Cursors, func(cursor *Cursor) bool {
+			return cursor != removedCursor
+		})
 	}
-	e.Cursors = newCursors
 }
 
-func (r *removeCursor) Undo(e *Editor) {
-	e.Cursors = r.originalCursors
-}
-
-func (r *removeCursor) Name() string {
-	return "Remove Cursor"
-}
-
-type pushCursorBelow struct {
-	pushCursor *pushCursor
-}
-
-func PushCursorBelow() *pushCursorBelow {
-	return &pushCursorBelow{}
-}
-
-func (p *pushCursorBelow) Do(editor *Editor) {
-	if len(editor.Cursors) > 0 {
-		lastCursor := editor.Cursors[len(editor.Cursors) - 1]
-		if lastCursor.End.Row < editor.Buffer.GetLength() - 1 {
-			rowOffset := lastCursor.End.Row - lastCursor.Start.Row + 1
-			newCursor := &Range{
-				Location{lastCursor.End.Row + rowOffset, lastCursor.Start.Column},
-				Location{lastCursor.End.Row + rowOffset, lastCursor.End.Column},
-			}
-			p.pushCursor = PushCursor(newCursor)
-			p.pushCursor.Do(editor)
+func PushCursorFromLast(movement Movement) Edit {
+	return func(editor *Editor) {
+		if len(editor.Cursors) > 0 {
+			lastCursor := editor.Cursors[len(editor.Cursors) - 1]
+			newCursor := movement(editor, *lastCursor)
+			PushCursor(&newCursor)(editor)
+			removeOOBCursors(editor)
 		}
 	}
-}
-
-func (p *pushCursorBelow) Undo(editor *Editor) {
-	if p.pushCursor != nil {
-		p.pushCursor.Undo(editor)
-	}
-}
-
-func (p *pushCursorBelow) Name() string {
-	return "Push Cursor Below"
 }

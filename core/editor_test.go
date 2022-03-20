@@ -14,18 +14,18 @@ func lines(e *Editor) [][]rune {
 }
 
 func TestSortCursors(t *testing.T) {
-	cursors := []*Range{
-		{Location{2, 1}, Location{2, 2}},
-		{Location{1, 1}, Location{1, 2}},
-		{Location{1, 2}, Location{1, 3}},
+	cursors := []*Cursor{
+		{Range: Range{Location{2, 1}, Location{2, 2}}},
+		{Range: Range{Location{1, 1}, Location{1, 2}}},
+		{Range: Range{Location{1, 2}, Location{1, 3}}},
 	}
 
 	sorted := SortCursors(cursors)
 
-	expected := []*Range{
-		{Location{1, 1}, Location{1, 2}},
-		{Location{1, 2}, Location{1, 3}},
-		{Location{2, 1}, Location{2, 2}},
+	expected := []*Cursor{
+		{Range: Range{Location{1, 1}, Location{1, 2}}},
+		{Range: Range{Location{1, 2}, Location{1, 3}}},
+		{Range: Range{Location{2, 1}, Location{2, 2}}},
 	}
 
 	assert.Equal(t, expected, sorted)
@@ -49,13 +49,12 @@ func TestUndo(t *testing.T) {
 
 	b := NewBuffer()
 	b.Current = b.Current.Insert(0, ToRune(lines))
-	e := Editor{Buffer: b}
+	e := &Editor{Buffer: b}
 
-	e.Do(
-		PushCursor(&Range{Location{1,2},Location{1,3}}),
-	)
-	e.Do(UndoMarker())
-	e.CursorDo(Split())
+	SetCursors(1,2,1,3)(e)
+	e.MarkUndo()
+
+	AsEdit(Split)(e)
 
 	expected := []string{"0000", "11", "11", "2222", "3333"}
 
@@ -64,8 +63,8 @@ func TestUndo(t *testing.T) {
 	e.Undo()
 	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 
-	e.Do(UndoMarker())
-	e.CursorDo(Insert([]rune("!")))
+	e.MarkUndo()
+	AsEdit(Insert([]rune("!")))(e)
 	expected = []string{"0000", "11!11", "2222", "3333"}
 
 	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
@@ -77,10 +76,11 @@ func TestUndo(t *testing.T) {
 func TestRedo(t *testing.T) {
 	b := NewBuffer()
 	b.Current = b.Current.Insert(0, ToRune([]string{"0000", "1111", "2222", "3333"}))
-	e := Editor{Buffer: b}
+	e := &Editor{Buffer: b}
 	e.Redo()
 	e.Redo()
 	e.Redo()
 	e.Redo()
-	e.CursorDo(Split())
+
+	AsEdit(Split)(e)
 }

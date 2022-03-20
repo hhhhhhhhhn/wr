@@ -40,24 +40,32 @@ func (e *Editor) Undo() {
 	if e.HistoryIndex > 0 {
 		e.HistoryIndex--
 	}
-	version := e.History[e.HistoryIndex]
-	e.Buffer.Restore(version)
-	e.Cursors = restoreCursors(e.CursorsVersions[version])
+	if e.HistoryIndex < len(e.History) {
+		version := e.History[e.HistoryIndex]
+		e.Buffer.Restore(version)
+		e.Cursors = restoreCursors(e.CursorsVersions[version])
+	}
 }
 
 func (e *Editor) Redo() {
 	if e.HistoryIndex < len(e.History) - 1 {
 		e.HistoryIndex++
 	}
-	e.Buffer.Restore(e.History[e.HistoryIndex])
+	if e.HistoryIndex < len(e.History) {
+		e.Buffer.Restore(e.History[e.HistoryIndex])
+	}
 }
 
 // Marks the start of an action to be undone
 func (e *Editor) MarkUndo() {
+	if e.CursorsVersions == nil {
+		e.CursorsVersions = make(map[int][]Cursor)
+	}
 	newVersion := rand.Int()
 	e.Buffer.Backup(newVersion)
 	e.CursorsVersions[newVersion] = backupCursors(e.Cursors)
-	e.History = append(e.History[:e.HistoryIndex+1], newVersion)
+	e.HistoryIndex++
+	e.History = append(e.History[:e.HistoryIndex-1], newVersion)
 }
 
 func backupCursors(cursors []*Cursor) []Cursor {

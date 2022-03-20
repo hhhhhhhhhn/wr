@@ -28,7 +28,7 @@ func removeOOBCursors(editor *Editor) {
 	})
 }
 
-func CursorEditToEdit(cursorEdit CursorEdit) Edit {
+func AsEdit(cursorEdit CursorEdit) Edit {
 	return func(editor *Editor) {
 		sortedCursors := SortCursors(editor.Cursors)
 		// CursorEdits are done in reverse cursor order, as, for example,

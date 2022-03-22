@@ -6,18 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Set cursors in StartRow, StartCol, EndRow, EndCol notation
-func SetCursors(locations ...int) Edit {
-	return func(editor *Editor) {
-		for i := 0; i < len(locations)/4; i++ {
-			PushCursor(&Cursor{Range: Range{
-				Start: Location{locations[i*4], locations[i*4+1]},
-				End: Location{locations[i*4+2], locations[i*4+3]},
-			}})(editor)
-		}
-	}
-}
-
 func TestSplit(t *testing.T) {
 	lines := []string{"0000", "1111", "2222", "3333"}
 	linesCopy := make([]string, len(lines))

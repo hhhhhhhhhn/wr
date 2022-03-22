@@ -17,7 +17,7 @@ import (
 var scroll = 0
 var out = bufio.NewWriterSize(os.Stdout, 4096)
 var in  = bufio.NewReader(os.Stdin)
-var editor core.Editor
+var editor *core.Editor
 var renderer *hexes.Renderer
 var listener  *input.Listener
 
@@ -113,13 +113,13 @@ func visualGetMovement() (movement core.Movement, ok bool) {
 func normalMode() {
 	for {
 		for len(editor.Cursors) == 0 {
-			editor.SingleUndo()
+			core.SetCursors(0, 0, 0, 1)(editor)
 		}
-		PrintEditor(&editor, renderer)
+		PrintEditor(editor, renderer)
 
 		movement, ok := normalGetMovement()
 		if ok {
-			editor.Do(core.GoTo(movement))
+			core.GoTo(movement)(editor)
 			continue
 		}
 
@@ -144,15 +144,15 @@ func normalMode() {
 			os.Exit(0)
 			break
 		case '\n': // Also <C-j>
-			editor.Do(core.PushCursorBelow())
+			core.PushCursorFromLast(core.Rows(1))(editor)
 			break
 		case 11: // <C-k>
-			editor.Do(core.RemoveCursor(editor.Cursors[len(editor.Cursors)-1]))
+			core.RemoveCursor(editor.Cursors[len(editor.Cursors)-1])(editor)
 			break
 		case input.ESCAPE:
 			cursors := len(editor.Cursors)
 			for i := 0; i < cursors - 1; i++ {
-				editor.Do(core.RemoveCursor(editor.Cursors[0]))
+				core.RemoveCursor(editor.Cursors[0])(editor)
 			}
 			break
 		case 12: // <C-l>
@@ -172,8 +172,8 @@ func normalMode() {
 		case 'd':
 			if movement, ok := normalGetMovement(); ok {
 				editor.MarkUndo()
-				editor.Do(core.SelectUntil(movement))
-				editor.CursorDo(core.Delete())
+				core.SelectUntil(movement)(editor)
+				core.AsEdit(core.Delete)(editor)
 			}
 		}
 	}
@@ -182,13 +182,13 @@ func normalMode() {
 func visualMode() {
 	for {
 		for len(editor.Cursors) == 0 {
-			editor.SingleUndo()
+			core.SetCursors(0, 0, 0, 1)(editor)
 		}
-		PrintEditor(&editor, renderer)
+		PrintEditor(editor, renderer)
 
 		movement, ok := visualGetMovement()
 		if ok {
-			editor.Do(core.ExpandSelection(movement))
+			core.ExpandSelection(movement)(editor)
 			continue
 		}
 
@@ -224,7 +224,7 @@ func visualMode() {
 			return
 		case 'd':
 			editor.MarkUndo()
-			editor.CursorDo(core.Delete())
+			core.AsEdit(core.Delete)(editor)
 		}
 	}
 }
@@ -234,11 +234,11 @@ func insertMode() {
 	editor.MarkUndo()
 	cursors := len(editor.Cursors)
 	for i := 0; i < cursors - 20; i ++ {
-		editor.Do(core.RemoveCursor(editor.Cursors[0]))
+		core.RemoveCursor(editor.Cursors[0])(editor)
 	}
 
 	for {
-		PrintEditor(&editor, renderer)
+		PrintEditor(editor, renderer)
 		event := getEvent()
 		if event.EventType != input.KeyPressed {
 			continue
@@ -246,22 +246,22 @@ func insertMode() {
 		switch(event.Chr) {
 		case input.ESCAPE:
 			editor.Undo()
-			editor.CursorDo(core.Insert(insertion))
+			core.AsEdit(core.Insert(insertion))(editor)
 			return
 		case input.BACKSPACE:
 			if len(insertion) > 0 {
 				insertion = insertion[:len(insertion)-1]
-				editor.Do(core.GoTo(core.Chars(-1)))
-				editor.CursorDo(core.Delete())
+				core.GoTo(core.Chars(-1))(editor)
+				core.AsEdit(core.Delete)(editor)
 			}
 			break
 		default:
 			if unicode.IsGraphic(event.Chr) || event.Chr == '\t' || event.Chr == '\n' {
 				insertion = append(insertion, event.Chr)
-				editor.CursorDo(core.Insert([]rune{event.Chr}))
+				core.AsEdit(core.Insert([]rune{event.Chr}))(editor)
 			} else {
 				insertion = append(insertion, []rune(fmt.Sprint(event.Chr))...)
-				editor.CursorDo(core.Insert([]rune(fmt.Sprint(event.Chr))))
+				core.AsEdit(core.Insert([]rune(fmt.Sprint(event.Chr))))(editor)
 			}
 			break
 		}
@@ -279,16 +279,11 @@ func memoryProfile() {
 func main() {
 	buffer := core.NewBuffer()
 	buffer.Current = buffer.Current.Insert(0, [][]rune{{'a', 'b', 'c'}})
-	editor = core.Editor{Buffer: buffer, Config: core.EditorConfig{Tabsize: 4}}
+	editor = &core.Editor{Buffer: buffer, Config: core.EditorConfig{Tabsize: 4}}
 	renderer = hexes.New(os.Stdin, out)
 	listener = input.New(in)
 	renderer.Start()
-	editor.Do(
-		core.PushCursor(&core.Range{
-			Start: core.Location{Row: 0, Column: 0},
-			End: core.Location{Row: 0, Column: 1}},
-		),
-	)
+	core.SetCursors(0, 0, 0, 1)(editor)
 
 	normalMode()
 }

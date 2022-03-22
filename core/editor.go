@@ -37,13 +37,15 @@ type Location struct {
 }
 
 func (e *Editor) Undo() {
+	if e.HistoryIndex >= len(e.History) { // Current version is not saved
+		e.MarkUndo()
+		e.HistoryIndex--
+	}
 	if e.HistoryIndex > 0 {
 		e.HistoryIndex--
 	}
 	if e.HistoryIndex < len(e.History) {
-		version := e.History[e.HistoryIndex]
-		e.Buffer.Restore(version)
-		e.Cursors = restoreCursors(e.CursorsVersions[version])
+		e.restoreVersion(e.History[e.HistoryIndex])
 	}
 }
 
@@ -52,8 +54,13 @@ func (e *Editor) Redo() {
 		e.HistoryIndex++
 	}
 	if e.HistoryIndex < len(e.History) {
-		e.Buffer.Restore(e.History[e.HistoryIndex])
+		e.restoreVersion(e.History[e.HistoryIndex])
 	}
+}
+
+func (e *Editor) restoreVersion(version Version) {
+	e.Buffer.Restore(version)
+	e.Cursors = restoreCursors(e.CursorsVersions[version])
 }
 
 // Marks the start of an action to be undone
@@ -79,7 +86,8 @@ func backupCursors(cursors []*Cursor) []Cursor {
 func restoreCursors(cursors []Cursor) []*Cursor {
 	restored := make([]*Cursor, len(cursors))
 	for i, cursor := range cursors {
-		restored[i] = &cursor
+		cursorCopy := cursor
+		restored[i] = &cursorCopy
 	}
 	return restored
 }

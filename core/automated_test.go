@@ -1,7 +1,7 @@
 // +build !noAuto
 
 package core
-/*
+
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
@@ -114,8 +114,8 @@ func testScenario(t *testing.T, s scenario, ce func() CursorEdit) {
 func cursors(editor *Editor) []Cursor {
 	dst := []Cursor{}
 	for _, cursor := range editor.Cursors {
-		dst = append(dst, *cursor)
+		cursorCopy := *cursor
+		dst = append(dst, cursorCopy)
 	}
 	return dst
 }
-*/

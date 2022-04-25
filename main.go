@@ -165,6 +165,9 @@ func normalMode() {
 		case 'm':
 			memoryProfile()
 			break
+		case 'c':
+			toggleCpuProf()
+			break
 		case 'i':
 			editor.MarkUndo()
 			insertMode()
@@ -276,6 +279,18 @@ func memoryProfile() {
 	pprof.WriteHeapProfile(file)
 }
 
+var cpuProfFile *os.File
+func toggleCpuProf() {
+	if cpuProfFile == nil {
+		cpuProfFile, _ = os.Create("cpuprof")
+		pprof.StartCPUProfile(cpuProfFile)
+	} else {
+		pprof.StopCPUProfile()
+		cpuProfFile.Close()
+		cpuProfFile = nil
+	}
+}
+
 func main() {
 	buffer := core.NewBuffer()
 	buffer.Current = buffer.Current.Insert(0, [][]rune{{'a', 'b', 'c'}})
@@ -333,11 +348,17 @@ func PrintEditor(e *core.Editor, r *hexes.Renderer) {
 }
 
 func isWithinCursor(e *core.Editor, row, col int) (isWithin bool, isLast bool) {
-	for i, cursor := range e.Cursors {
+	var cursors []*core.Cursor
+	if len(e.Cursors) > 25 {
+		cursors = e.Cursors[len(e.Cursors)-25:]
+	} else {
+		cursors = e.Cursors
+	}
+	for i, cursor := range cursors {
 		if (
 			((row == cursor.Start.Row && col >= cursor.Start.Column) || (row > cursor.Start.Row)) &&
 			((row == cursor.End.Row && col < cursor.End.Column) || (row < cursor.End.Row))){
-				if i == len(e.Cursors) - 1 {
+				if i == len(cursors) - 1 {
 					return true, true
 				}
 				return true, false

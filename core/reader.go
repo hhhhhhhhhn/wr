@@ -2,53 +2,86 @@ package core
 
 import (
 	"io"
+	"unicode/utf8"
 )
 
 type EditorReader struct {
-	editor  *Editor
-	row     int
-	col     int
-	pending []byte
+	editor        *Editor
+	row           int
+	index         int
+	remainingLine []rune
+	pendingBytes  []byte
+
 }
 
 func (e *EditorReader) Read(out []byte) (read int, err error) {
+	if e.pendingBytes != nil {
+		if len(out) < len(e.pendingBytes) {
+			return 0, io.ErrShortBuffer
+		}
+		copy(out, e.pendingBytes)
+		read = len(e.pendingBytes)
+		e.pendingBytes = nil
+		return read, nil
+	}
 	if e.row >= e.editor.Buffer.GetLength() || e.row < 0 {
 		return 0, io.EOF
 	}
-	var buffer []byte
-
-	if e.pending != nil {
-		buffer = e.pending
-		e.pending = nil
-	} else {
-		line := e.editor.Buffer.GetLine(e.row)
-		index := ColumnToIndex(e.editor, line, e.col)
-		buffer = []byte(string(line[index:]) + "\n")
+	for {
+		char, length, err := e.ReadRune()
+		if err != nil {
+			break
+		}
+		if len(out) < length {
+			e.pendingBytes = make([]byte, length)
+			utf8.EncodeRune(e.pendingBytes, char)
+			copy(out, e.pendingBytes)
+			e.pendingBytes = e.pendingBytes[len(out):]
+			read += len(out)
+			break
+		} else {
+			utf8.EncodeRune(out, char)
+			out = out[length:]
+			read += length
+		}
 	}
-
-	if len(out) < len(buffer) {
-		e.pending = buffer[len(out):]
-		read = len(out)
-	} else {
-		read = len(buffer)
-		e.row++
-		e.col = 0
-	}
-
-	copy(out, buffer)
 	return read, nil
 }
 
-func (e *EditorReader) GoTo(row, col int) {
+func (e *EditorReader) ReadRune() (char rune, length int, err error) {
+	if e.row >= e.editor.Buffer.GetLength() || e.row < 0 {
+		return 0, 0, io.EOF
+	}
+
+	if e.remainingLine == nil {
+		e.remainingLine = e.editor.Buffer.GetLine(e.row)[e.index:]
+	}
+
+	if len(e.remainingLine) == 0 {
+		e.remainingLine = nil
+		e.row++
+		e.index = 0
+		return '\n', 1, nil
+	}
+	char = e.remainingLine[0]
+	length = utf8.RuneLen(char)
+	e.remainingLine = e.remainingLine[1:]
+	e.index++
+	return char, length, nil
+}
+
+func (e *EditorReader) SetLocation(row, col int) {
 	e.row = row
-	e.col = col
-	e.pending = nil
+	e.index = LocationToIndex(e.editor, Location{row, col})
+	e.remainingLine = nil
 }
 
 func (e *EditorReader) GetLocation() (row, col int) {
-	return e.row, e.col
+	return e.row, ColumnSpan(e.editor, e.editor.Buffer.GetLine(e.row)[:e.index])
 }
 
 func NewEditorReader(editor *Editor, row, col int) *EditorReader {
-	return &EditorReader{editor: editor, row: row, col: col}
+	reader := &EditorReader{editor: editor}
+	reader.SetLocation(row, col)
+	return reader
 }

@@ -139,8 +139,12 @@ func normalMode() {
 			editor.Redo()
 			break
 		case 23: // <C-w>
+			err := core.SaveToFile(editor, "file.txt")
 			renderer.End()
 			out.Flush()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, err)
+			}
 			os.Exit(0)
 			break
 		case '\n': // Also <C-j>

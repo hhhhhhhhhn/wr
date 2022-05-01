@@ -3,6 +3,8 @@ package core
 import (
 	"sort"
 	"math/rand"
+	"io"
+	"os"
 
 	rw "github.com/mattn/go-runewidth"
 )
@@ -160,3 +162,11 @@ func CopyLines(lines [][]rune) [][]rune {
 	return copied
 }
 
+func SaveToFile(editor *Editor, filename string) error {
+	reader := NewEditorReader(editor, 0, 0)
+	data, err:= io.ReadAll(reader)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filename, data, 0644)
+}

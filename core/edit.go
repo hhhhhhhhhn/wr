@@ -248,4 +248,3 @@ func SetCursors(locations ...int) Edit {
 		}
 	}
 }
-

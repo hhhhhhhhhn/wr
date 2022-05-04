@@ -1,5 +1,9 @@
 package core
 
+import "unicode"
+
+var OOBCursor = Cursor{Range: Range{Start: Location{-1, -1}}}
+
 type Movement func(*Editor, Cursor) Cursor
 
 func Rows(rows int) Movement {
@@ -58,6 +62,39 @@ func Chars(chars int) Movement {
 		cursor.End.Row = cursor.Start.Row
 		cursor.Start.Column = ColumnSpan(editor, line[:newCursorChrIndex])
 		cursor.End.Column = cursor.Start.Column + 1
+		return cursor
+	}
+}
+
+func Words(words int) Movement {
+	return func(editor *Editor, cursor Cursor) Cursor {
+		reader := NewEditorReader(editor, cursor.Start.Row, cursor.Start.Column)
+		for wordsLeft := words; wordsLeft > 0; wordsLeft-- {
+			for {
+				char, _, err := reader.ReadRune()
+				if err != nil {
+					return OOBCursor
+				}
+				if unicode.IsSpace(char) {
+					break
+				}
+			}
+			for {
+				char, _, err := reader.ReadRune()
+				if err != nil {
+					return OOBCursor
+				}
+				if !unicode.IsSpace(char) {
+					break
+				}
+			}
+		}
+		reader.UnreadRune()
+		row, col := reader.GetLocation()
+		cursor.Start.Row = row
+		cursor.Start.Column = col
+		cursor.End.Row = row
+		cursor.End.Column = col+1
 		return cursor
 	}
 }

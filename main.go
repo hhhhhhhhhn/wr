@@ -71,6 +71,8 @@ func normalGetMovement() (movement core.Movement, ok bool) {
 		return core.Chars(multiplier), true
 	case 'h':
 		return core.Chars(-multiplier), true
+	case 'w':
+		return core.Words(multiplier), true
 	case 'L':
 		return core.Columns(multiplier), true
 	case 'H':
@@ -96,6 +98,8 @@ func visualGetMovement() (movement core.Movement, ok bool) {
 		return core.Chars(multiplier), true
 	case 'H':
 		return core.Chars(-multiplier), true
+	case 'w':
+		return core.Words(multiplier), true
 	case 'l':
 		return core.Columns(multiplier), true
 	case 'h':

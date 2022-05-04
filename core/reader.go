@@ -70,6 +70,19 @@ func (e *EditorReader) ReadRune() (char rune, length int, err error) {
 	return char, length, nil
 }
 
+func (e *EditorReader) UnreadRune() (err error) {
+	if e.index == 0 {
+		if e.row == 0 {
+			return io.EOF
+		}
+		e.row--
+		e.index = len(e.editor.Buffer.GetLine(e.row))
+	} else {
+		e.index--
+	}
+	return nil
+}
+
 func (e *EditorReader) SetLocation(row, col int) {
 	e.row = row
 	e.index = LocationToIndex(e.editor, Location{row, col})
@@ -77,6 +90,9 @@ func (e *EditorReader) SetLocation(row, col int) {
 }
 
 func (e *EditorReader) GetLocation() (row, col int) {
+	if e.row >= e.editor.Buffer.GetLength() {
+		return -1, -1
+	}
 	return e.row, ColumnSpan(e.editor, e.editor.Buffer.GetLine(e.row)[:e.index])
 }
 

@@ -179,8 +179,11 @@ func SingleDelete(rangee Range) Edit {
 			if cursor.Start.Row == rangee.End.Row && cursor.Start.Column > rangee.End.Column {
 				cursor.Start.Column -= deletedColumns
 			}
-			if cursor.End.Row == rangee.End.Row && cursor.Start.Column >= rangee.End.Column {
+			if cursor.End.Row == rangee.End.Row && cursor.End.Column >= rangee.End.Column {
 				cursor.End.Column -= deletedColumns
+				if cursor.Start == cursor.End {
+					cursor.End.Column++
+				}
 			}
 			if cursor.Start.Row >= rangee.End.Row {
 				cursor.Start.Row -= deletedRows

@@ -9,7 +9,7 @@ type EditorReader struct {
 	editor        *Editor
 	row           int
 	index         int
-	remainingLine []rune
+	currentLine   []rune
 	pendingBytes  []byte
 
 }
@@ -53,40 +53,47 @@ func (e *EditorReader) ReadRune() (char rune, length int, err error) {
 		return 0, 0, io.EOF
 	}
 
-	if e.remainingLine == nil {
-		e.remainingLine = e.editor.Buffer.GetLine(e.row)[e.index:]
+	if e.currentLine == nil {
+		e.currentLine = e.editor.Buffer.GetLine(e.row)
 	}
 
-	if len(e.remainingLine) == 0 {
-		e.remainingLine = nil
+	if e.index >= len(e.currentLine) {
+		e.currentLine = nil
 		e.row++
 		e.index = 0
 		return '\n', 1, nil
 	}
-	char = e.remainingLine[0]
+	char = e.currentLine[e.index]
 	length = utf8.RuneLen(char)
-	e.remainingLine = e.remainingLine[1:]
 	e.index++
 	return char, length, nil
 }
 
-func (e *EditorReader) UnreadRune() (err error) {
+func (e *EditorReader) UnreadRune() (char rune, length int, err error) {
 	if e.index == 0 {
 		if e.row == 0 {
-			return io.EOF
+			return 0, 0, io.EOF
 		}
 		e.row--
 		e.index = len(e.editor.Buffer.GetLine(e.row))
-	} else {
-		e.index--
+		e.currentLine = nil
+		return '\n', 1, nil
 	}
-	return nil
+
+	if e.currentLine == nil {
+		e.currentLine = e.editor.Buffer.GetLine(e.row)
+	}
+
+	e.index--
+	char = e.currentLine[e.index]
+	length = utf8.RuneLen(char)
+	return char, length, nil
 }
 
 func (e *EditorReader) SetLocation(row, col int) {
 	e.row = row
 	e.index = LocationToIndex(e.editor, Location{row, col})
-	e.remainingLine = nil
+	e.currentLine = nil
 }
 
 func (e *EditorReader) GetLocation() (row, col int) {

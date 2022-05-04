@@ -38,3 +38,27 @@ func TestReaderLongLine(t *testing.T) {
 
 	assert.Equal(t, expected, data)
 }
+
+func TestUnread(t *testing.T) {
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune([]string{"0000", "1111", "2222", "3333"}))
+	e := &Editor{Buffer: b}
+
+	SetCursors(1,1,1,2)(e)
+	AsEdit(Insert([]rune{'!'}))(e)
+
+	reader := NewEditorReader(e, 3, 0)
+
+	var data []rune
+	for i := 0; i < 100; i++ {
+		char, _, err := reader.UnreadRune()
+		if err != nil {
+			break
+		}
+		data = append(data, char)
+	}
+
+	expected := []rune("\n2222\n111!1\n0000")
+
+	assert.Equal(t, expected, data)
+}

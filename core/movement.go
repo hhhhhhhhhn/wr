@@ -67,6 +67,13 @@ func Chars(chars int) Movement {
 }
 
 func Words(words int) Movement {
+	if words > 0 {
+		return WordsForwards(words)
+	}
+	return WordsBackwards(-words)
+}
+
+func WordsForwards(words int) Movement {
 	return func(editor *Editor, cursor Cursor) Cursor {
 		reader := NewEditorReader(editor, cursor.Start.Row, cursor.Start.Column)
 		for wordsLeft := words; wordsLeft > 0; wordsLeft-- {
@@ -90,6 +97,39 @@ func Words(words int) Movement {
 			}
 		}
 		reader.UnreadRune()
+		row, col := reader.GetLocation()
+		cursor.Start.Row = row
+		cursor.Start.Column = col
+		cursor.End.Row = row
+		cursor.End.Column = col+1
+		return cursor
+	}
+}
+
+func WordsBackwards(words int) Movement {
+	return func(editor *Editor, cursor Cursor) Cursor {
+		reader := NewEditorReader(editor, cursor.Start.Row, cursor.Start.Column)
+		for wordsLeft := words; wordsLeft > 0; wordsLeft-- {
+			for {
+				char, _, err := reader.UnreadRune()
+				if err != nil {
+					return OOBCursor
+				}
+				if !unicode.IsSpace(char) {
+					break
+				}
+			}
+			for {
+				char, _, err := reader.UnreadRune()
+				if err != nil {
+					return OOBCursor
+				}
+				if unicode.IsSpace(char) {
+					break
+				}
+			}
+		}
+		reader.ReadRune()
 		row, col := reader.GetLocation()
 		cursor.Start.Row = row
 		cursor.Start.Column = col

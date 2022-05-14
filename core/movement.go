@@ -1,6 +1,8 @@
 package core
 
-import "unicode"
+import (
+	"regexp"
+)
 
 var OOBCursor = Cursor{Range: Range{Start: Location{-1, -1}}}
 
@@ -66,77 +68,58 @@ func Chars(chars int) Movement {
 	}
 }
 
+// NOTE: Regex must have a "Cursor" group for this to work, and start with "^"
+func Regex(regex *regexp.Regexp, times int) Movement {
+	if times < 0 {
+		times--
+	}
+	return func(editor *Editor, cursor Cursor) Cursor {
+		reader := NewEditorReader(editor, cursor.Start.Row, cursor.Start.Column)
+		timesLeft := abs(times)
+		for timesLeft > 0 {
+			var err error
+			if times > 0 {
+				_, _, err = reader.ReadRune()
+			} else {
+				_, _, err = reader.UnreadRune()
+			}
+			if err != nil {
+				return OOBCursor
+			}
+
+			row, col := reader.GetLocation()
+			if row == -1 {
+				return OOBCursor
+			}
+
+			found := regex.MatchReader(reader)
+			reader.SetLocation(row, col)
+
+			if found {
+				timesLeft--
+			}
+		}
+		for i := 0; i < regex.SubexpIndex("Cursor"); i++ {
+			reader.ReadRune()
+		}
+		row, col := reader.GetLocation()
+		cursor.Start.Row = row
+		cursor.End.Row = row
+		cursor.Start.Column = col
+		cursor.End.Column = col+1
+		return cursor
+	}
+}
+
+func abs(a int) int {
+	if a > 0 {
+		return a
+	}
+	return -a
+}
+
 func Words(words int) Movement {
-	if words > 0 {
-		return WordsForwards(words)
-	}
-	return WordsBackwards(-words)
-}
-
-func WordsForwards(words int) Movement {
-	return func(editor *Editor, cursor Cursor) Cursor {
-		reader := NewEditorReader(editor, cursor.Start.Row, cursor.Start.Column)
-		for wordsLeft := words; wordsLeft > 0; wordsLeft-- {
-			for {
-				char, _, err := reader.ReadRune()
-				if err != nil {
-					return OOBCursor
-				}
-				if unicode.IsSpace(char) {
-					break
-				}
-			}
-			for {
-				char, _, err := reader.ReadRune()
-				if err != nil {
-					return OOBCursor
-				}
-				if !unicode.IsSpace(char) {
-					break
-				}
-			}
-		}
-		reader.UnreadRune()
-		row, col := reader.GetLocation()
-		cursor.Start.Row = row
-		cursor.Start.Column = col
-		cursor.End.Row = row
-		cursor.End.Column = col+1
-		return cursor
-	}
-}
-
-func WordsBackwards(words int) Movement {
-	return func(editor *Editor, cursor Cursor) Cursor {
-		reader := NewEditorReader(editor, cursor.Start.Row, cursor.Start.Column)
-		for wordsLeft := words; wordsLeft > 0; wordsLeft-- {
-			for {
-				char, _, err := reader.UnreadRune()
-				if err != nil {
-					return OOBCursor
-				}
-				if !unicode.IsSpace(char) {
-					break
-				}
-			}
-			for {
-				char, _, err := reader.UnreadRune()
-				if err != nil {
-					return OOBCursor
-				}
-				if unicode.IsSpace(char) {
-					break
-				}
-			}
-		}
-		reader.ReadRune()
-		row, col := reader.GetLocation()
-		cursor.Start.Row = row
-		cursor.Start.Column = col
-		cursor.End.Row = row
-		cursor.End.Column = col+1
-		return cursor
-	}
+	return Regex(regexp.MustCompile(`^\s(?P<Cursor>)\S`), words)
 }
 
 func GoTo(movement Movement) Edit {

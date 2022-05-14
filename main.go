@@ -48,6 +48,10 @@ func getMultiplier() int {
 		}
 		switch event.Chr {
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			if event.Chr == '0' && multiplier == 0 {
+				unGetEvent()
+				return 1
+			}
 			multiplier = 10 * multiplier + int(event.Chr - '0')
 			break
 		default:
@@ -83,6 +87,10 @@ func normalGetMovement() (movement core.Movement, ok bool) {
 		return core.Rows(multiplier), true
 	case 'k', 'K':
 		return core.Rows(-multiplier), true
+	case '0':
+		return core.StartOfLine, true
+	case '$':
+		return core.EndOfLine, true
 	default:
 		unGetEvent()
 		return nil, false
@@ -112,6 +120,10 @@ func visualGetMovement() (movement core.Movement, ok bool) {
 		return core.Rows(multiplier), true
 	case 'k', 'K':
 		return core.Rows(-multiplier), true
+	case '0':
+		return core.StartOfLine, true
+	case '$':
+		return core.EndOfLine, true
 	default:
 		unGetEvent()
 		return nil, false
@@ -184,6 +196,34 @@ func normalMode() {
 			editor.MarkUndo()
 			insertMode()
 			break
+		case 'I':
+			editor.MarkUndo()
+			core.GoTo(core.StartOfLine)(editor)
+			insertMode()
+			break
+		case 'a':
+			editor.MarkUndo()
+			core.GoTo(core.Chars(1))(editor)
+			insertMode()
+			break
+		case 'A':
+			editor.MarkUndo()
+			core.GoTo(core.EndOfLine)(editor)
+			insertMode()
+			break
+		case 'o':
+			editor.MarkUndo()
+			core.GoTo(core.EndOfLine)(editor)
+			core.AsEdit(core.Insert([]rune{'\n'}))(editor)
+			insertMode()
+			break
+		case 'O':
+			editor.MarkUndo()
+			core.GoTo(core.StartOfLine)(editor)
+			core.AsEdit(core.Insert([]rune{'\n'}))(editor)
+			core.GoTo(core.Rows(-1))(editor)
+			insertMode()
+			break
 		case 'd':
 			if movement, ok := normalGetMovement(); ok {
 				editor.MarkUndo()
@@ -233,6 +273,21 @@ func visualMode() {
 			break
 		case 'i':
 			editor.MarkUndo()
+			insertMode()
+			break
+		case 'I':
+			editor.MarkUndo()
+			core.GoTo(core.StartOfLine)(editor)
+			insertMode()
+			break
+		case 'a':
+			editor.MarkUndo()
+			core.GoTo(core.Chars(1))(editor)
+			insertMode()
+			break
+		case 'A':
+			editor.MarkUndo()
+			core.GoTo(core.EndOfLine)(editor)
 			insertMode()
 			break
 		case input.ESCAPE:

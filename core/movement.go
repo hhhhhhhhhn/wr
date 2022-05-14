@@ -24,6 +24,21 @@ func Columns(cols int) Movement {
 	}
 }
 
+func EndOfLine(editor *Editor, cursor Cursor) Cursor {
+	line := editor.Buffer.GetLine(cursor.Start.Row)
+	cursor.Start.Column = ColumnSpan(editor, line)
+	cursor.End.Column = cursor.Start.Column+1
+	cursor.End.Row = cursor.Start.Row
+	return cursor
+}
+
+func StartOfLine (editor *Editor, cursor Cursor) Cursor {
+	cursor.Start.Column = 0
+	cursor.End.Column = 1
+	cursor.End.Row = cursor.Start.Row
+	return cursor
+}
+
 func Chars(chars int) Movement {
 	return func(editor *Editor, cursor Cursor) Cursor {
 		line := editor.Buffer.GetLine(cursor.Start.Row)

@@ -222,13 +222,31 @@ func RemoveCursor(removedCursor *Cursor) Edit {
 	}
 }
 
+// If new position overlaps, removes last
 func PushCursorFromLast(movement Movement) Edit {
 	return func(editor *Editor) {
 		if len(editor.Cursors) > 0 {
 			lastCursor := editor.Cursors[len(editor.Cursors) - 1]
 			newCursor := movement(editor, *lastCursor)
-			PushCursor(&newCursor)(editor)
-			removeOOBCursors(editor)
+			if isWithinACursor(editor, &newCursor) {
+				RemoveCursor(lastCursor)(editor)
+			} else {
+				PushCursor(&newCursor)(editor)
+				// TODO: Check only last cursor
+				removeOOBCursors(editor)
+			}
 		}
 	}
+}
+
+func isWithinACursor(editor *Editor, cursor *Cursor) bool {
+	row, col := cursor.Start.Row, cursor.Start.Column
+	for _, cursor := range editor.Cursors {
+		if (
+			((row == cursor.Start.Row && col >= cursor.Start.Column) || (row > cursor.Start.Row)) &&
+			((row == cursor.End.Row && col < cursor.End.Column) || (row < cursor.End.Row))){
+				return true
+			}
+	}
+	return false
 }

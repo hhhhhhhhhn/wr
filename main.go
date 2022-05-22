@@ -167,9 +167,6 @@ func normalMode() {
 			}
 			os.Exit(0)
 			break
-		case '\n': // Also <C-j>
-			core.PushCursorFromLast(core.Rows(1))(editor)
-			break
 		case 11: // <C-k>
 			core.RemoveCursor(editor.Cursors[len(editor.Cursors)-1])(editor)
 			break
@@ -185,6 +182,9 @@ func normalMode() {
 			break
 		case 'v':
 			visualMode()
+			break
+		case 22: // <C-v>
+			newCursorMode()
 			break
 		case 'm':
 			memoryProfile()
@@ -244,6 +244,71 @@ func visualMode() {
 		movement, ok := visualGetMovement()
 		if ok {
 			core.ExpandSelection(movement)(editor)
+			continue
+		}
+
+		event := getEvent()
+		if event.EventType != input.KeyPressed {
+			continue
+		}
+
+		switch(event.Chr) {
+		case 'u':
+			editor.Undo()
+			break
+		case 'U':
+			editor.MarkUndo()
+			break
+		case 18: // <C-r>
+			editor.Redo()
+			break
+		case 23: // <C-w>
+			renderer.End()
+			out.Flush()
+			os.Exit(0)
+			break
+		case 12: // <C-l>
+			renderer.Refresh()
+			out.Flush()
+			break
+		case 'i':
+			editor.MarkUndo()
+			insertMode()
+			break
+		case 'I':
+			editor.MarkUndo()
+			core.GoTo(core.StartOfLine)(editor)
+			insertMode()
+			break
+		case 'a':
+			editor.MarkUndo()
+			core.GoTo(core.Chars(1))(editor)
+			insertMode()
+			break
+		case 'A':
+			editor.MarkUndo()
+			core.GoTo(core.EndOfLine)(editor)
+			insertMode()
+			break
+		case input.ESCAPE:
+			return
+		case 'd':
+			editor.MarkUndo()
+			core.AsEdit(core.Delete)(editor)
+		}
+	}
+}
+
+func newCursorMode() {
+	for {
+		for len(editor.Cursors) == 0 {
+			core.SetCursors(0, 0, 0, 1)(editor)
+		}
+		PrintEditor(editor, renderer)
+
+		movement, ok := visualGetMovement()
+		if ok {
+			core.PushCursorFromLast(movement)(editor)
 			continue
 		}
 

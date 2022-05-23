@@ -130,6 +130,84 @@ func visualGetMovement() (movement core.Movement, ok bool) {
 	}
 }
 
+func baseActions(char rune) (ok bool) {
+	switch(char) {
+	case 'u':
+		editor.Undo()
+		return true
+	case 'U':
+		editor.MarkUndo()
+		return true
+	case 18: // <C-r>
+		editor.Redo()
+		return true
+	case 23: // <C-w>
+		err := core.SaveToFile(editor, "file.txt")
+		renderer.End()
+		out.Flush()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+		os.Exit(0)
+		return true
+	case 12: // <C-l>
+		renderer.Refresh()
+		out.Flush()
+		return true
+	case 'v':
+		visualMode()
+		return true
+	case 22: // <C-v>
+		newCursorMode()
+		return true
+	case 'm':
+		memoryProfile()
+		return true
+	case 'c':
+		toggleCpuProf()
+		return true
+	case 'i':
+		editor.MarkUndo()
+		insertMode()
+		return true
+	case 'I':
+		editor.MarkUndo()
+		core.GoTo(core.StartOfLine)(editor)
+		insertMode()
+		return true
+	case 'a':
+		editor.MarkUndo()
+		core.GoTo(core.Chars(1))(editor)
+		insertMode()
+		return true
+	case 'A':
+		editor.MarkUndo()
+		core.GoTo(core.EndOfLine)(editor)
+		insertMode()
+		return true
+	case 'o':
+		editor.MarkUndo()
+		core.GoTo(core.EndOfLine)(editor)
+		core.AsEdit(core.Insert([]rune{'\n'}))(editor)
+		insertMode()
+		return true
+	case 'O':
+		editor.MarkUndo()
+		core.GoTo(core.StartOfLine)(editor)
+		core.AsEdit(core.Insert([]rune{'\n'}))(editor)
+		core.GoTo(core.Rows(-1))(editor)
+		insertMode()
+		return true
+	case 'd':
+		if movement, ok := normalGetMovement(); ok {
+			editor.MarkUndo()
+			core.SelectUntil(movement)(editor)
+			core.AsEdit(core.Delete)(editor)
+		}
+	}
+	return false
+}
+
 func normalMode() {
 	for {
 		for len(editor.Cursors) == 0 {
@@ -148,88 +226,15 @@ func normalMode() {
 			continue
 		}
 
-		switch(event.Chr) {
-		case 'u':
-			editor.Undo()
-			break
-		case 'U':
-			editor.MarkUndo()
-			break
-		case 18: // <C-r>
-			editor.Redo()
-			break
-		case 23: // <C-w>
-			err := core.SaveToFile(editor, "file.txt")
-			renderer.End()
-			out.Flush()
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-			}
-			os.Exit(0)
-			break
-		case 11: // <C-k>
-			core.RemoveCursor(editor.Cursors[len(editor.Cursors)-1])(editor)
-			break
+		switch event.Chr {
 		case input.ESCAPE:
 			cursors := len(editor.Cursors)
 			for i := 0; i < cursors - 1; i++ {
 				core.RemoveCursor(editor.Cursors[0])(editor)
 			}
 			break
-		case 12: // <C-l>
-			renderer.Refresh()
-			out.Flush()
-			break
-		case 'v':
-			visualMode()
-			break
-		case 22: // <C-v>
-			newCursorMode()
-			break
-		case 'm':
-			memoryProfile()
-			break
-		case 'c':
-			toggleCpuProf()
-			break
-		case 'i':
-			editor.MarkUndo()
-			insertMode()
-			break
-		case 'I':
-			editor.MarkUndo()
-			core.GoTo(core.StartOfLine)(editor)
-			insertMode()
-			break
-		case 'a':
-			editor.MarkUndo()
-			core.GoTo(core.Chars(1))(editor)
-			insertMode()
-			break
-		case 'A':
-			editor.MarkUndo()
-			core.GoTo(core.EndOfLine)(editor)
-			insertMode()
-			break
-		case 'o':
-			editor.MarkUndo()
-			core.GoTo(core.EndOfLine)(editor)
-			core.AsEdit(core.Insert([]rune{'\n'}))(editor)
-			insertMode()
-			break
-		case 'O':
-			editor.MarkUndo()
-			core.GoTo(core.StartOfLine)(editor)
-			core.AsEdit(core.Insert([]rune{'\n'}))(editor)
-			core.GoTo(core.Rows(-1))(editor)
-			insertMode()
-			break
-		case 'd':
-			if movement, ok := normalGetMovement(); ok {
-				editor.MarkUndo()
-				core.SelectUntil(movement)(editor)
-				core.AsEdit(core.Delete)(editor)
-			}
+		default:
+			baseActions(event.Chr)
 		}
 	}
 }
@@ -253,48 +258,15 @@ func visualMode() {
 		}
 
 		switch(event.Chr) {
-		case 'u':
-			editor.Undo()
-			break
-		case 'U':
-			editor.MarkUndo()
-			break
-		case 18: // <C-r>
-			editor.Redo()
-			break
-		case 23: // <C-w>
-			renderer.End()
-			out.Flush()
-			os.Exit(0)
-			break
-		case 12: // <C-l>
-			renderer.Refresh()
-			out.Flush()
-			break
-		case 'i':
-			editor.MarkUndo()
-			insertMode()
-			break
-		case 'I':
-			editor.MarkUndo()
-			core.GoTo(core.StartOfLine)(editor)
-			insertMode()
-			break
-		case 'a':
-			editor.MarkUndo()
-			core.GoTo(core.Chars(1))(editor)
-			insertMode()
-			break
-		case 'A':
-			editor.MarkUndo()
-			core.GoTo(core.EndOfLine)(editor)
-			insertMode()
-			break
 		case input.ESCAPE:
 			return
 		case 'd':
 			editor.MarkUndo()
 			core.AsEdit(core.Delete)(editor)
+			break
+		default:
+			baseActions(event.Chr)
+			break
 		}
 	}
 }
@@ -318,48 +290,11 @@ func newCursorMode() {
 		}
 
 		switch(event.Chr) {
-		case 'u':
-			editor.Undo()
-			break
-		case 'U':
-			editor.MarkUndo()
-			break
-		case 18: // <C-r>
-			editor.Redo()
-			break
-		case 23: // <C-w>
-			renderer.End()
-			out.Flush()
-			os.Exit(0)
-			break
-		case 12: // <C-l>
-			renderer.Refresh()
-			out.Flush()
-			break
-		case 'i':
-			editor.MarkUndo()
-			insertMode()
-			break
-		case 'I':
-			editor.MarkUndo()
-			core.GoTo(core.StartOfLine)(editor)
-			insertMode()
-			break
-		case 'a':
-			editor.MarkUndo()
-			core.GoTo(core.Chars(1))(editor)
-			insertMode()
-			break
-		case 'A':
-			editor.MarkUndo()
-			core.GoTo(core.EndOfLine)(editor)
-			insertMode()
-			break
 		case input.ESCAPE:
 			return
-		case 'd':
-			editor.MarkUndo()
-			core.AsEdit(core.Delete)(editor)
+		default:
+			baseActions(event.Chr)
+			break
 		}
 	}
 }

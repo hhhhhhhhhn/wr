@@ -301,6 +301,7 @@ func newCursorMode() {
 
 func insertMode() {
 	insertion := []rune{}
+	deletion := 0
 	editor.MarkUndo()
 	cursors := len(editor.Cursors)
 	for i := 0; i < cursors - 20; i ++ {
@@ -316,14 +317,19 @@ func insertMode() {
 		switch(event.Chr) {
 		case input.ESCAPE:
 			editor.Undo()
+			core.GoTo(core.Chars(-deletion))(editor)
+			core.SelectUntil(core.Chars(deletion))(editor)
+			core.AsEdit(core.Delete)(editor)
 			core.AsEdit(core.Insert(insertion))(editor)
 			return
 		case input.BACKSPACE:
-			if len(insertion) > 0 {
+			if len(insertion) == 0 {
+				deletion++
+			} else {
 				insertion = insertion[:len(insertion)-1]
-				core.GoTo(core.Chars(-1))(editor)
-				core.AsEdit(core.Delete)(editor)
 			}
+			core.GoTo(core.Chars(-1))(editor)
+			core.AsEdit(core.Delete)(editor)
 			break
 		default:
 			if unicode.IsGraphic(event.Chr) || event.Chr == '\t' || event.Chr == '\n' {
@@ -334,6 +340,9 @@ func insertMode() {
 				core.AsEdit(core.Insert([]rune(fmt.Sprint(event.Chr))))(editor)
 			}
 			break
+		}
+		if len(editor.Cursors) == 0 {
+			core.SetCursors(0, 0, 0, 1)(editor)
 		}
 	}
 }
@@ -371,7 +380,12 @@ func main() {
 }
 
 func PrintEditor(e *core.Editor, r *hexes.Renderer) {
-	lastCursorRow := e.Cursors[len(e.Cursors) - 1].Start.Row
+	var lastCursorRow int
+	if len(editor.Cursors) > 0 {
+		lastCursorRow = e.Cursors[len(e.Cursors) - 1].Start.Row
+	} else {
+		lastCursorRow = 0
+	}
 	if lastCursorRow < scroll {
 		scroll = lastCursorRow
 	}

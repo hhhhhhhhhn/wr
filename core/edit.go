@@ -18,13 +18,17 @@ func filter[T any](original []T, test func(T) bool) []T {
 	return filtered[:i]
 }
 
-func removeOOBCursors(editor *Editor) {
+func IsOOB(editor *Editor, cursor *Cursor) bool {
 	lastRow := editor.Buffer.GetLength() - 1
+	return !(cursor.Start.Row >= 0 &&
+		   cursor.End.Row >= 0 &&
+		   cursor.Start.Row <= lastRow &&
+		   cursor.End.Row <= lastRow)
+}
+
+func removeOOBCursors(editor *Editor) {
 	editor.Cursors = filter(editor.Cursors, func(cursor *Cursor) bool {
-		return cursor.Start.Row >= 0 &&
-			   cursor.End.Row >= 0 &&
-			   cursor.Start.Row <= lastRow &&
-			   cursor.End.Row <= lastRow
+		return !IsOOB(editor, cursor)
 	})
 }
 

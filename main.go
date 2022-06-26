@@ -40,13 +40,13 @@ func toggleCpuProf() {
 }
 
 var attrDefault = hexes.NORMAL
-var attrCursor = hexes.REVERSE
+var attrCursor = hexes.Join(hexes.NORMAL, hexes.REVERSE)
 var attrActive = hexes.Join(hexes.MAGENTA, hexes.REVERSE)
-var attrStatus = hexes.REVERSE
+var attrStatus = hexes.Join(hexes.NORMAL, hexes.REVERSE)
 
 func main() {
 	buffer := core.NewBuffer()
-	buffer.Current = buffer.Current.Insert(0, [][]rune{{'a', 'b', 'c'}})
+	buffer.Current = buffer.Current.Insert(0, [][]rune{{}})
 	editor = &core.Editor{Buffer: buffer, Config: core.EditorConfig{Tabsize: 4}}
 	renderer = hexes.New(os.Stdin, out)
 	listener = input.New(in)

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/hhhhhhhhhn/hexes"
+	"github.com/hhhhhhhhhn/hexes/input"
 	"github.com/hhhhhhhhhn/wr/core"
 )
 
@@ -36,13 +37,57 @@ func printStatusBar(e *core.Editor, r *hexes.Renderer, modeString string) {
 	}
 
 	modeString = " " + modeString
-	if len(modeString) < r.Cols {
-		modeString += strings.Repeat(" ", r.Cols - len(modeString))
-	}
+	modeString = padWithSpaces(modeString, len(modeString), r.Cols)
 	r.SetAttribute(attrStatus)
 	r.SetString(row, 0, modeString)
 	r.SetString(row, r.Cols-len(position), position)
 }
 
 func commandMode() {
+	buffer := core.NewBuffer()
+	buffer.Current = buffer.Current.Insert(0, [][]rune{{}})
+	commandEditor := &core.Editor{Buffer: buffer}
+
+	for {
+		if len(commandEditor.Cursors) != 1 {
+			core.SetCursors(0, 0, 0, 1)(commandEditor)
+		}
+		command := getLineAsString(commandEditor, 0)
+		printCommand(renderer, command)
+		event := getEvent()
+		for event.EventType != input.KeyPressed {
+			event = getEvent()
+		}
+		switch event.Chr {
+		case input.ENTER:
+			runCommand(command)
+			return
+		case input.ESCAPE:
+			return
+		case input.BACKSPACE:
+			core.GoTo(core.Chars(-1))(commandEditor)
+			core.SelectUntil(core.Chars(1))(commandEditor)
+			core.AsEdit(core.Delete)(commandEditor)
+			break
+		default:
+			core.AsEdit(core.Insert([]rune{event.Chr}))(commandEditor)
+			break
+		}
+	}
+}
+
+func runCommand(command string) {
+	printCommand(renderer, command)
+}
+
+func printCommand(r *hexes.Renderer, command string) {
+	row := r.Rows - 1
+	formatted := padWithSpaces(":" + command, len(command), r.Cols)
+
+	r.SetAttribute(attrStatus)
+	r.SetString(row, 0, formatted)
+	r.SetAttribute(attrActive)
+	r.Set(row, len(command)+1, ' ')
+
+	out.Flush()
 }

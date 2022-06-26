@@ -39,7 +39,7 @@ func printStatusBar(e *core.Editor, r *hexes.Renderer, modeString string) {
 	if len(modeString) < r.Cols {
 		modeString += strings.Repeat(" ", r.Cols - len(modeString))
 	}
-	r.SetAttribute(hexes.REVERSE)
+	r.SetAttribute(attrStatus)
 	r.SetString(row, 0, modeString)
 	r.SetString(row, r.Cols-len(position), position)
 }

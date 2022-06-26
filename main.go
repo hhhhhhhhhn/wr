@@ -39,6 +39,11 @@ func toggleCpuProf() {
 	}
 }
 
+var attrDefault = hexes.NORMAL
+var attrCursor = hexes.REVERSE
+var attrActive = hexes.Join(hexes.MAGENTA, hexes.REVERSE)
+var attrStatus = hexes.REVERSE
+
 func main() {
 	buffer := core.NewBuffer()
 	buffer.Current = buffer.Current.Insert(0, [][]rune{{'a', 'b', 'c'}})

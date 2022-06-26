@@ -43,12 +43,12 @@ func printLine(e *core.Editor, r *hexes.Renderer, row int) {
 		withinCursor, withinLast := isWithinCursor(e, row, col)
 		if withinCursor {
 			if withinLast {
-				r.SetAttribute(hexes.MAGENTA + hexes.REVERSE)
+				r.SetAttribute(attrActive)
 			} else {
-				r.SetAttribute(hexes.REVERSE)
+				r.SetAttribute(attrCursor)
 			}
 		} else {
-			r.SetAttribute(r.DefaultAttribute)
+			r.SetAttribute(attrDefault)
 		}
 		r.SetString(row - scroll, col, string(chr))
 		col += core.RuneWidth(e, chr)

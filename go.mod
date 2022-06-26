@@ -3,7 +3,7 @@ module github.com/hhhhhhhhhn/wr
 go 1.18
 
 require (
-	github.com/hhhhhhhhhn/hexes v0.2.1
+	github.com/hhhhhhhhhn/hexes v0.5.0
 	github.com/mattn/go-runewidth v0.0.13
 	github.com/stretchr/testify v1.7.0
 )

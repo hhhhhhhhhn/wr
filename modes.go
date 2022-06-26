@@ -237,6 +237,7 @@ func normalMode() {
 			for i := 0; i < cursors - 1; i++ {
 				core.RemoveCursor(editor.Cursors[0])(editor)
 			}
+			core.GoTo(core.Unselect)(editor)
 			break
 		default:
 			baseActions(event.Chr)
@@ -266,6 +267,7 @@ func visualMode() {
 
 		switch(event.Chr) {
 		case input.ESCAPE:
+			core.GoTo(core.Unselect)(editor)
 			return
 		case 'd':
 			editor.MarkUndo()

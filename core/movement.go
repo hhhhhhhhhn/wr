@@ -39,6 +39,12 @@ func StartOfLine (editor *Editor, cursor Cursor) Cursor {
 	return cursor
 }
 
+func Unselect(_ *Editor, cursor Cursor) Cursor {
+	cursor.End.Row = cursor.Start.Row
+	cursor.End.Column = cursor.Start.Column + 1
+	return cursor
+}
+
 func Chars(chars int) Movement {
 	return func(editor *Editor, cursor Cursor) Cursor {
 		line := editor.Buffer.GetLine(cursor.Start.Row)

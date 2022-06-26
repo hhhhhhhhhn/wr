@@ -208,6 +208,8 @@ var defaultCursor = core.Cursor{
 
 
 func normalMode() {
+	pushMode("normal")
+	defer popMode()
 	lastCursor := defaultCursor
 	for {
 		if len(editor.Cursors) == 0 {
@@ -243,6 +245,8 @@ func normalMode() {
 }
 
 func visualMode() {
+	pushMode("visual")
+	defer popMode()
 	for {
 		for len(editor.Cursors) == 0 {
 			core.SetCursors(0, 0, 0, 1)(editor)
@@ -275,6 +279,8 @@ func visualMode() {
 }
 
 func newCursorMode() {
+	pushMode("new cursor")
+	defer popMode()
 	for {
 		for len(editor.Cursors) == 0 {
 			core.SetCursors(0, 0, 0, 1)(editor)
@@ -304,6 +310,8 @@ func newCursorMode() {
 
 // FIXME: Doesn't always match entered text
 func insertMode() {
+	pushMode("insert")
+	defer popMode()
 	insertion := []rune{}
 	deletion := 0
 	editor.MarkUndo()

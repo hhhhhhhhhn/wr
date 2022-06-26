@@ -7,7 +7,6 @@ import (
 	"github.com/hhhhhhhhhn/wr/core"
 )
 
-
 func PrintEditor(e *core.Editor, r *hexes.Renderer) {
 	renderRows := r.Rows - 1 // Extra row for commands
 
@@ -55,6 +54,8 @@ func PrintEditor(e *core.Editor, r *hexes.Renderer) {
 	for ;row < scroll + renderRows; row++ {
 		r.SetString(row - scroll, 0, strings.Repeat(" ", r.Cols))
 	}
+
+	printStatusBar(r, modeString)
 
 	out.Flush()
 }

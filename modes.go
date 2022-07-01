@@ -4,6 +4,7 @@ import (
 	"unicode"
 	"fmt"
 	"os"
+	"regexp"
 
 	"github.com/hhhhhhhhhn/hexes/input"
 	"github.com/hhhhhhhhhn/wr/core"
@@ -75,6 +76,10 @@ func normalGetMovement() (movement core.Movement, ok bool) {
 		return core.Rows(multiplier), true
 	case 'k', 'K':
 		return core.Rows(-multiplier), true
+	case 'n':
+		return core.Regex(editor.Global["Regex"].(*regexp.Regexp), multiplier), true
+	case 'N':
+		return core.Regex(editor.Global["Regex"].(*regexp.Regexp), -multiplier), true
 	case '0':
 		return core.StartOfLine, true
 	case '$':
@@ -108,6 +113,10 @@ func visualGetMovement() (movement core.Movement, ok bool) {
 		return core.Rows(multiplier), true
 	case 'k', 'K':
 		return core.Rows(-multiplier), true
+	case 'n':
+		return core.Regex(editor.Global["Regex"].(*regexp.Regexp), multiplier), true
+	case 'N':
+		return core.Regex(editor.Global["Regex"].(*regexp.Regexp), -multiplier), true
 	case '0':
 		return core.StartOfLine, true
 	case '$':
@@ -136,7 +145,7 @@ func baseActions(char rune) (ok bool) {
 		editor.Redo()
 		return true
 	case 23: // <C-w>
-		err := core.SaveToFile(editor, "file.txt")
+		err := core.SaveToFile(editor, editor.Global["Filename"].(string))
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}

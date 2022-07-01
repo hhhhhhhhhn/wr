@@ -21,6 +21,7 @@ type Editor struct {
 	Cursors         []*Cursor
 	CursorsVersions map[Version][]Cursor
 	Config          EditorConfig
+	Global          map[string]any // For changing values
 }
 
 type EditorConfig struct {

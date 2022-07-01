@@ -1,47 +1,13 @@
 package main
 
 import (
-	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/hhhhhhhhhn/hexes"
 	"github.com/hhhhhhhhhn/hexes/input"
 	"github.com/hhhhhhhhhn/wr/core"
 )
-
-var modes = []string{}
-var modeString string
-
-func pushMode(mode string) {
-	modes = append(modes, mode)
-	updateModeString()
-}
-
-func popMode() {
-	modes = modes[:len(modes)-1]
-	updateModeString()
-}
-
-func updateModeString() {
-	modeString = strings.Join(modes, " > ")
-}
-
-func printStatusBar(e *core.Editor, r *hexes.Renderer, modeString string) {
-	row := r.Rows - 1
-	var position string
-	if len(e.Cursors) > 0 {
-		position = fmt.Sprintf("line %v, col %v ",
-			editor.Cursors[len(editor.Cursors)-1].Start.Row,
-			editor.Cursors[len(editor.Cursors)-1].Start.Column,
-		)
-	}
-
-	modeString = " " + modeString
-	modeString = padWithSpaces(modeString, len(modeString), r.Cols)
-	r.SetAttribute(attrStatus)
-	r.SetString(row, 0, modeString)
-	r.SetString(row, r.Cols-len(position), position)
-}
 
 func commandMode() {
 	buffer := core.NewBuffer()
@@ -95,6 +61,9 @@ func runCommand(command string) (output string, ok bool) {
 		return
 	}
 	function, ok := commands[args[0]]
+	if !ok && len(args[0]) > 0 {
+		function, ok = commands[string(args[0][0])]
+	}
 	if !ok {
 		return "command not found", false
 	}
@@ -102,12 +71,15 @@ func runCommand(command string) (output string, ok bool) {
 }
 
 var commands = map[string] func([]string)(output string, ok bool) {
-	"w": func([]string) (string, bool) {
-		err := core.SaveToFile(editor, "file.txt")
+	"w": func(args []string) (string, bool) {
+		if len(args) > 1 {
+			editor.Global["Filename"] = strings.Join(args[1:], " ")
+		}
+		err := core.SaveToFile(editor, editor.Global["Filename"].(string))
 		if err != nil {
 			return err.Error(), false
 		}
-		return "", true
+		return "saved " + editor.Global["Filename"].(string), true
 	},
 	"q": func([]string) (string, bool) {
 		quit()
@@ -123,5 +95,14 @@ var commands = map[string] func([]string)(output string, ok bool) {
 	},
 	"hello": func([]string) (string, bool) {
 		return "there",  true
+	},
+	"/": func(args []string) (string, bool) {
+		regexString := "^" + strings.Join(args, " ")[1:]
+		regex, err := regexp.Compile(regexString)
+		if err != nil {
+			return err.Error(), false
+		}
+		editor.Global["Regex"] = regex
+		return "", true
 	},
 }

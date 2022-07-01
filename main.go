@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"os"
+	"regexp"
 	"runtime"
 	"runtime/pprof"
 
@@ -47,7 +48,14 @@ var attrStatus = hexes.Join(hexes.NORMAL, hexes.REVERSE)
 func main() {
 	buffer := core.NewBuffer()
 	buffer.Current = buffer.Current.Insert(0, [][]rune{{}})
-	editor = &core.Editor{Buffer: buffer, Config: core.EditorConfig{Tabsize: 4}}
+	editor = &core.Editor{
+		Buffer: buffer,
+		Config: core.EditorConfig{Tabsize: 4},
+		Global: map[string]any{
+			"Regex": regexp.MustCompile(`^\s(?P<Cursor>)\S`),
+			"Filename": "wr.txt",
+		},
+	}
 	renderer = hexes.New(os.Stdin, out)
 	listener = input.New(in)
 	renderer.Start()

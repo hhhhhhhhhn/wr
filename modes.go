@@ -118,6 +118,12 @@ func visualGetMovement() (movement core.Movement, ok bool) {
 	}
 }
 
+func quit() {
+	renderer.End()
+	out.Flush()
+	os.Exit(0)
+}
+
 func baseActions(char rune) (ok bool) {
 	switch(char) {
 	case 'u':
@@ -131,12 +137,10 @@ func baseActions(char rune) (ok bool) {
 		return true
 	case 23: // <C-w>
 		err := core.SaveToFile(editor, "file.txt")
-		renderer.End()
-		out.Flush()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 		}
-		os.Exit(0)
+		quit()
 		return true
 	case 12: // <C-l>
 		renderer.Refresh()

@@ -60,7 +60,8 @@ func commandMode() {
 		}
 		switch event.Chr {
 		case input.ENTER:
-			runCommand(command)
+			out, _ := runCommand(command)
+			modeString = out
 			return
 		case input.ESCAPE:
 			return
@@ -76,10 +77,6 @@ func commandMode() {
 	}
 }
 
-func runCommand(command string) {
-	printCommand(renderer, command)
-}
-
 func printCommand(r *hexes.Renderer, command string) {
 	row := r.Rows - 1
 	formatted := padWithSpaces(":" + command, len(command), r.Cols)
@@ -90,4 +87,41 @@ func printCommand(r *hexes.Renderer, command string) {
 	r.Set(row, len(command)+1, ' ')
 
 	out.Flush()
+}
+
+func runCommand(command string) (output string, ok bool) {
+	args := strings.Split(command, " ")
+	if len(args) == 0 {
+		return
+	}
+	function, ok := commands[args[0]]
+	if !ok {
+		return "command not found", false
+	}
+	return function(args)
+}
+
+var commands = map[string] func([]string)(output string, ok bool) {
+	"w": func([]string) (string, bool) {
+		err := core.SaveToFile(editor, "file.txt")
+		if err != nil {
+			return err.Error(), false
+		}
+		return "", true
+	},
+	"q": func([]string) (string, bool) {
+		quit()
+		return "", true
+	},
+	"wq": func([]string) (string, bool) {
+		err := core.SaveToFile(editor, "file.txt")
+		if err != nil {
+			return err.Error(), false
+		}
+		quit()
+		return "", true
+	},
+	"hello": func([]string) (string, bool) {
+		return "there",  true
+	},
 }

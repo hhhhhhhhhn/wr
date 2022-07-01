@@ -71,7 +71,7 @@ func PrintEditor(e *core.Editor, r *hexes.Renderer) {
 		r.SetString(row - scroll, 0, strings.Repeat(" ", r.Cols))
 	}
 
-	printStatusBar(e, r, modeString)
+	printStatusBar(e, r, statusString)
 
 	out.Flush()
 }
@@ -97,23 +97,25 @@ func isWithinCursor(e *core.Editor, row, col int) (isWithin bool, isLast bool) {
 }
 
 var modes = []string{}
-var modeString string
+var statusString string
+var statusOk bool = true
 
 func pushMode(mode string) {
 	modes = append(modes, mode)
-	updateModeString()
+	updateStatusString()
 }
 
 func popMode() {
 	modes = modes[:len(modes)-1]
-	updateModeString()
+	updateStatusString()
 }
 
-func updateModeString() {
-	modeString = strings.Join(modes, " > ")
+func updateStatusString() {
+	statusString = strings.Join(modes, " > ")
+	statusOk = true
 }
 
-func printStatusBar(e *core.Editor, r *hexes.Renderer, modeString string) {
+func printStatusBar(e *core.Editor, r *hexes.Renderer, statusString string) {
 	row := r.Rows - 1
 	var position string
 	if len(e.Cursors) > 0 {
@@ -123,10 +125,14 @@ func printStatusBar(e *core.Editor, r *hexes.Renderer, modeString string) {
 		)
 	}
 
-	modeString = " " + modeString
-	modeString = padWithSpaces(modeString, len(modeString), r.Cols)
-	r.SetAttribute(attrStatus)
-	r.SetString(row, 0, modeString)
+	statusString = " " + statusString
+	statusString = padWithSpaces(statusString, len(statusString), r.Cols)
+	if statusOk {
+		r.SetAttribute(attrStatus)
+	} else {
+		r.SetAttribute(attrStatusErr)
+	}
+	r.SetString(row, 0, statusString)
 	r.SetString(row, r.Cols-len(position), position)
 }
 

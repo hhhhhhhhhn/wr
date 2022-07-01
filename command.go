@@ -26,8 +26,7 @@ func commandMode() {
 		}
 		switch event.Chr {
 		case input.ENTER:
-			out, _ := runCommand(command)
-			modeString = out
+			statusString, statusOk = runCommand(command)
 			return
 		case input.ESCAPE:
 			return
@@ -65,7 +64,7 @@ func runCommand(command string) (output string, ok bool) {
 		function, ok = commands[string(args[0][0])]
 	}
 	if !ok {
-		return "command not found", false
+		return `command "` + args[0] + `" not found`, false
 	}
 	return function(args)
 }

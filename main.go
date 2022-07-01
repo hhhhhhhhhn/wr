@@ -40,10 +40,11 @@ func toggleCpuProf() {
 	}
 }
 
-var attrDefault = hexes.NORMAL
-var attrCursor = hexes.Join(hexes.NORMAL, hexes.REVERSE)
-var attrActive = hexes.Join(hexes.MAGENTA, hexes.REVERSE)
-var attrStatus = hexes.Join(hexes.NORMAL, hexes.REVERSE)
+var attrDefault   = hexes.NORMAL
+var attrStatusErr = hexes.Join(hexes.NORMAL, hexes.BOLD, hexes.BG_RED, hexes.REVERSE)
+var attrCursor    = hexes.Join(hexes.NORMAL, hexes.REVERSE)
+var attrActive    = hexes.Join(hexes.NORMAL, hexes.MAGENTA, hexes.REVERSE)
+var attrStatus    = hexes.Join(hexes.NORMAL, hexes.REVERSE)
 
 func main() {
 	buffer := core.NewBuffer()

@@ -1,5 +1,7 @@
 package core
 
+import "regexp"
+
 type Edit func(*Editor)
 type CursorEdit func(*Editor, *Cursor) // Only uses single cursor
 
@@ -131,6 +133,36 @@ func Insert(insertion []rune) CursorEdit {
 			InsertInLine(line)(editor, cursor)
 		}
 	}
+}
+
+func SmartSplit(editor *Editor, cursor *Cursor) {
+	indentation := GetIndentation(editor, cursor)
+	Split(editor, cursor)
+	InsertInLine(indentation)(editor, cursor)
+}
+
+var whitespace = regexp.MustCompile(`^\s*`)
+
+func GetIndentation(editor *Editor, cursor *Cursor) []rune {
+	reader := NewEditorReader(editor, cursor.Start.Row, 0)
+	match := whitespace.FindReaderIndex(reader)
+	if match == nil { // Shouldn't really happen, but safety first
+		return []rune{}
+	}
+	reader.SetLocation(cursor.Start.Row, 0)
+	indentation := []rune{}
+	for i := 0; i < match[1]; i++ {
+		chr, _, _ := reader.ReadRune()
+		indentation = append(indentation, chr)
+	}
+	return indentation
+}
+
+func cursorInLineStart(cursor Cursor) Cursor {
+	cursor.End.Row = cursor.Start.Row
+	cursor.Start.Column = 0
+	cursor.End.Column = 1
+	return cursor
 }
 
 func splitRune(str []rune, div rune) (output [][]rune) {

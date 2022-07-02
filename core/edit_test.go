@@ -216,6 +216,28 @@ func TestInsertOOB(t *testing.T) {
 	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
 
+func TestSmartSplit(t *testing.T) {
+	lines := []string{"0000", " 1111", "  2222", "   3333"}
+	linesCopy := make([]string, len(lines))
+	copy(linesCopy, lines)
+
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := &Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
+	e.MarkUndo()
+
+	SetCursors(1,2,1,3, 2,3,2,4)(e)
+
+	AsEdit(SmartSplit)(e)
+
+	expected := []string{"0000", " 1", " 111", "  2", "  222", "   3333"}
+
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
+
+	e.Undo()
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
+}
+
 func TestSingleDelete(t *testing.T) {
 	lines := []string{"0000", "1111", "2222", "3333"}
 	linesCopy := make([]string, len(lines))

@@ -327,14 +327,6 @@ func newCursorMode() {
 func insertMode() {
 	pushMode("insert")
 	defer popMode()
-	insertion := []rune{}
-	deletion := 0
-	editor.MarkUndo()
-	cursors := len(editor.Cursors)
-	for i := 0; i < cursors - 20; i ++ {
-		core.RemoveCursor(editor.Cursors[0])(editor)
-	}
-
 	for {
 		PrintEditor(editor, renderer)
 		event := getEvent()
@@ -343,27 +335,17 @@ func insertMode() {
 		}
 		switch(event.Chr) {
 		case input.ESCAPE:
-			editor.Undo()
-			core.GoTo(core.Chars(-deletion))(editor)
-			core.SelectUntil(core.Chars(deletion))(editor)
-			core.AsEdit(core.Delete)(editor)
-			core.AsEdit(core.Insert(insertion))(editor)
 			return
 		case input.BACKSPACE:
-			if len(insertion) == 0 {
-				deletion++
-			} else {
-				insertion = insertion[:len(insertion)-1]
-			}
 			core.GoTo(core.Chars(-1))(editor)
 			core.AsEdit(core.Delete)(editor)
 			break
+		case '\n':
+			core.AsEdit(core.SmartSplit)(editor) // FIXME: Add to indentation
 		default:
-			if unicode.IsGraphic(event.Chr) || event.Chr == '\t' || event.Chr == '\n' {
-				insertion = append(insertion, event.Chr)
+			if unicode.IsGraphic(event.Chr) || event.Chr == '\t' {
 				core.AsEdit(core.Insert([]rune{event.Chr}))(editor)
 			} else {
-				insertion = append(insertion, []rune(fmt.Sprint(event.Chr))...)
 				core.AsEdit(core.Insert([]rune(fmt.Sprint(event.Chr))))(editor)
 			}
 			break

@@ -97,6 +97,7 @@ func Regex(regex *regexp.Regexp, times int) Movement {
 	return func(editor *Editor, cursor Cursor) Cursor {
 		reader := NewEditorReader(editor, cursor.Start.Row, cursor.Start.Column)
 		timesLeft := abs(times)
+		eof := false
 		for timesLeft > 0 {
 			var err error
 			if times > 0 {
@@ -104,14 +105,14 @@ func Regex(regex *regexp.Regexp, times int) Movement {
 			} else {
 				_, _, err = reader.UnreadRune()
 			}
-			if err != nil {
-				return OOBCursor
-			}
 
 			row, col := reader.GetLocation()
-			if row == -1 {
-				return OOBCursor
+
+			if row == -1 || err != nil{
+				eof = true
+				break
 			}
+
 
 			found := regex.MatchReader(reader)
 			reader.SetLocation(row, col)
@@ -120,7 +121,7 @@ func Regex(regex *regexp.Regexp, times int) Movement {
 				timesLeft--
 			}
 		}
-		for i := 0; i < regex.SubexpIndex("Cursor"); i++ {
+		for i := 0; !eof && i < regex.SubexpIndex("Cursor"); i++ {
 			reader.ReadRune()
 		}
 		row, col := reader.GetLocation()

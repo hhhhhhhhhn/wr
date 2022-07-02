@@ -9,12 +9,17 @@ type EditorReader struct {
 	editor        *Editor
 	row           int
 	index         int
+	eof           bool
 	currentLine   []rune
 	pendingBytes  []byte
 
 }
 
 func (e *EditorReader) Read(out []byte) (read int, err error) {
+	if e.eof {
+		e.eof = false
+		return 0, io.EOF
+	}
 	if e.pendingBytes != nil {
 		if len(out) < len(e.pendingBytes) {
 			return 0, io.ErrShortBuffer
@@ -24,12 +29,12 @@ func (e *EditorReader) Read(out []byte) (read int, err error) {
 		e.pendingBytes = nil
 		return read, nil
 	}
-	if e.row >= e.editor.Buffer.GetLength() || e.row < 0 {
-		return 0, io.EOF
-	}
 	for {
 		char, length, err := e.ReadRune()
 		if err != nil {
+			copy(out, []byte{'\n'})
+			read += 1
+			e.eof = true
 			break
 		}
 		if len(out) < length {
@@ -49,19 +54,19 @@ func (e *EditorReader) Read(out []byte) (read int, err error) {
 }
 
 func (e *EditorReader) ReadRune() (char rune, length int, err error) {
-	if e.row >= e.editor.Buffer.GetLength() || e.row < 0 {
-		return 0, 0, io.EOF
-	}
-
 	if e.currentLine == nil {
 		e.currentLine = e.editor.Buffer.GetLine(e.row)
 	}
 
 	if e.index >= len(e.currentLine) {
-		e.currentLine = nil
-		e.row++
-		e.index = 0
-		return '\n', 1, nil
+		if e.row < e.editor.Buffer.GetLength() - 1 {
+			e.currentLine = nil
+			e.row++
+			e.index = 0
+			return '\n', 1, nil
+		} else {
+			return 0, 0, io.EOF
+		}
 	}
 	char = e.currentLine[e.index]
 	length = utf8.RuneLen(char)
@@ -91,20 +96,18 @@ func (e *EditorReader) UnreadRune() (char rune, length int, err error) {
 }
 
 func (e *EditorReader) SetLocation(row, col int) {
+	e.eof = false
 	e.row = row
 	e.index = LocationToIndex(e.editor, Location{row, col})
 	e.currentLine = nil
 }
 
 func (e *EditorReader) GetLocation() (row, col int) {
-	if e.row >= e.editor.Buffer.GetLength() {
-		return -1, -1
-	}
 	return e.row, ColumnSpan(e.editor, e.editor.Buffer.GetLine(e.row)[:e.index])
 }
 
 func NewEditorReader(editor *Editor, row, col int) *EditorReader {
-	reader := &EditorReader{editor: editor}
+	reader := &EditorReader{editor: editor, eof: false}
 	reader.SetLocation(row, col)
 	return reader
 }

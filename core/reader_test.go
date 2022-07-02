@@ -9,6 +9,27 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestReaderOOB(t *testing.T) {
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune([]string{"0000", "1111", "2222", "3333"}))
+	e := &Editor{Buffer: b}
+
+	reader := NewEditorReader(e, 0, 0)
+	for i := 0; i < 100; i++ {
+		reader.ReadRune()
+	}
+	row, col := reader.GetLocation()
+	assert.Equal(t, 3, row)
+	assert.Equal(t, 4, col)
+
+	for i := 0; i < 100; i++ {
+		reader.UnreadRune()
+	}
+	row, col = reader.GetLocation()
+	assert.Equal(t, 0, row)
+	assert.Equal(t, 0, col)
+}
+
 func TestReader(t *testing.T) {
 	b := NewBuffer()
 	b.Current = b.Current.Insert(0, ToRune([]string{"0000", "1111", "2222", "3333"}))

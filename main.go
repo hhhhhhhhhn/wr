@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"runtime"
 	"runtime/pprof"
+	"strings"
 
 	"github.com/hhhhhhhhhn/hexes"
 	"github.com/hhhhhhhhhn/hexes/input"
@@ -47,14 +48,16 @@ var attrActive    = hexes.Join(hexes.NORMAL, hexes.MAGENTA, hexes.REVERSE)
 var attrStatus    = hexes.Join(hexes.NORMAL, hexes.REVERSE)
 
 func main() {
-	buffer := core.NewBuffer()
-	buffer.Current = buffer.Current.Insert(0, [][]rune{{}})
+	f := getFlags()
+	buffer := loadBuffer(f.file)
+	//buffer := core.NewBuffer()
+	//buffer.Current = buffer.Current.Insert(0, [][]rune{{}})
 	editor = &core.Editor{
 		Buffer: buffer,
 		Config: core.EditorConfig{Tabsize: 4},
 		Global: map[string]any{
 			"Regex": regexp.MustCompile(`^\s(?P<Cursor>)\S`),
-			"Filename": "wr.txt",
+			"Filename": f.file,
 		},
 	}
 	renderer = hexes.New(os.Stdin, out)
@@ -63,4 +66,18 @@ func main() {
 	core.SetCursors(0, 0, 0, 1)(editor)
 
 	normalMode()
+}
+
+func loadBuffer(filename string) *core.Buffer {
+	buffer := core.NewBuffer()
+	contents, err := os.ReadFile(filename)
+	if err == nil {
+		lines := strings.Split(string(contents), "\n")
+		for i, line := range lines {
+			buffer.Current = buffer.Current.Insert(i, [][]rune{[]rune(line)})
+		}
+	} else {
+		buffer.Current = buffer.Current.Insert(0, [][]rune{{}})
+	}
+	return buffer
 }

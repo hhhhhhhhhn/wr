@@ -205,6 +205,12 @@ func baseActions(char rune) (ok bool) {
 			core.SelectUntil(movement)(editor)
 			core.AsEdit(core.Delete)(editor)
 		}
+	case 'y':
+		core.AsEdit(core.Yank(0))(editor)
+		break
+	case 'p':
+		core.AsEdit(core.Paste(0))(editor)
+		break
 	case ':':
 		commandMode()
 	}
@@ -216,7 +222,6 @@ var defaultCursor = core.Cursor{
 		Start: core.Location{Row: 0, Column: 0},
 		End: core.Location{Row: 0, Column: 1},
 	},
-	Registers: []string{},
 }
 
 

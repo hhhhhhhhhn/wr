@@ -455,3 +455,50 @@ func TestDeleteOOB(t *testing.T) {
 	e.Undo()
 	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
 }
+
+func TestYankAndPaste(t *testing.T) {
+	lines := []string{"0000", "1111", "2222", "3333"}
+	linesCopy := make([]string, len(lines))
+	copy(linesCopy, lines)
+
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := &Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
+	e.MarkUndo()
+
+	SetCursors(1,1,2,2)(e)
+
+	AsEdit(Yank(0))(e)
+	GoTo(StartOfLine)(e)
+	AsEdit(Paste(0))(e)
+
+	expected := []string{"0000", "111", "221111", "2222", "3333"}
+
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
+
+	e.Undo()
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
+}
+func TestYankEOL(t *testing.T) {
+	lines := []string{"0000", "1111", "2222", "3333"}
+	linesCopy := make([]string, len(lines))
+	copy(linesCopy, lines)
+
+	b := NewBuffer()
+	b.Current = b.Current.Insert(0, ToRune(lines))
+	e := &Editor{Buffer: b, Config: EditorConfig{Tabsize: 4}}
+	e.MarkUndo()
+
+	SetCursors(1,0, 1,4)(e)
+
+	AsEdit(Yank(0))(e)
+	GoTo(StartOfLine)(e)
+	AsEdit(Paste(0))(e)
+
+	expected := []string{"0000", "11111111", "2222", "3333"}
+
+	assert.Equal(t, ToRune(expected), e.Buffer.Current.Value())
+
+	e.Undo()
+	assert.Equal(t, ToRune(linesCopy), e.Buffer.Current.Value())
+}

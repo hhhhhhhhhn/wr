@@ -244,6 +244,31 @@ func Delete(editor *Editor, cursor *Cursor) {
 	SingleDelete(cursor.Range)(editor)
 }
 
+func Yank(register int) CursorEdit {
+	return func(editor *Editor, cursor *Cursor) {
+		reader := NewEditorReader(editor, cursor.Start.Row, cursor.Start.Column)
+		// FIXME: The localization is very inneficient
+		yanked := []rune{}
+		for {
+			chr, _, err := reader.ReadRune()
+			row, col := reader.GetLocation()
+			if (row == cursor.End.Row && col > cursor.End.Column) ||
+				row > cursor.End.Row ||
+				err != nil {
+					break
+			}
+			yanked = append(yanked, chr)
+		}
+		cursor.Registers[register] = yanked
+	}
+}
+
+func Paste(register int) CursorEdit {
+	return func (editor *Editor, cursor *Cursor) {
+		Insert(cursor.Registers[register])(editor, cursor)
+	}
+}
+
 // By default, the cursor can be one more character to the right than there is
 // in the line, representing the newline and allowing for insertions after the
 // last character. This means the cursor end is OOB.

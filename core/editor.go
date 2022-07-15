@@ -11,7 +11,7 @@ import (
 
 type Cursor struct {
 	Range
-	Registers []string
+	Registers [30][]rune
 }
 
 type Editor struct {

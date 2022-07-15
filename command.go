@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"strings"
 	"os/exec"
-	"io/ioutil"
+	"io"
 
 	"github.com/hhhhhhhhhn/hexes"
 	"github.com/hhhhhhhhhn/hexes/input"
@@ -87,7 +87,7 @@ var commands = map[string] func([]string)(output string, ok bool) {
 		return "", true
 	},
 	"wq": func([]string) (string, bool) {
-		err := core.SaveToFile(editor, "file.txt")
+		err := core.SaveToFile(editor, editor.Global["Filename"].(string))
 		if err != nil {
 			return err.Error(), false
 		}
@@ -109,7 +109,7 @@ var commands = map[string] func([]string)(output string, ok bool) {
 	"!": func(args []string) (string, bool) {
 		command := exec.Command("/bin/sh", "-c", strings.Join(args, " ")[1:])
 		command.Stdin = core.NewEditorReader(editor, 0, 0)
-		command.Stderr = ioutil.Discard
+		command.Stderr = io.Discard
 		stdout, err := command.Output()
 		if err != nil {
 			return err.Error(), false

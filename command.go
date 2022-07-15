@@ -3,6 +3,8 @@ package main
 import (
 	"regexp"
 	"strings"
+	"os/exec"
+	"io/ioutil"
 
 	"github.com/hhhhhhhhhn/hexes"
 	"github.com/hhhhhhhhhn/hexes/input"
@@ -103,5 +105,24 @@ var commands = map[string] func([]string)(output string, ok bool) {
 		}
 		editor.Global["Regex"] = regex
 		return "", true
+	},
+	"!": func(args []string) (string, bool) {
+		command := exec.Command("/bin/sh", "-c", strings.Join(args, " ")[1:])
+		command.Stdin = core.NewEditorReader(editor, 0, 0)
+		command.Stderr = ioutil.Discard
+		stdout, err := command.Output()
+		if err != nil {
+			return err.Error(), false
+		}
+		editor.MarkUndo()
+		// FIXME: This is a horribly unefficient way to do this
+		for editor.Buffer.GetLength() > 0 {
+			editor.Buffer.Current = editor.Buffer.Current.Remove(0, 1)
+		}
+		for i, line := range strings.Split(string(stdout), "\n") {
+			editor.Buffer.Current =
+				editor.Buffer.Current.Insert(i, [][]rune{[]rune(line)})
+		}
+		return "", false
 	},
 }

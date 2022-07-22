@@ -1,5 +1,4 @@
 # TODO
-- Make regex select entire match
 - Extra movements (gg, G)
 - Remove last visible line
 - Insert mode optimisation
@@ -13,3 +12,4 @@
 - Command line arguments, open file
 - External commands
 - Copy/Pasting
+- Make regex select entire match

@@ -89,8 +89,8 @@ func Chars(chars int) Movement {
 	}
 }
 
-// NOTE: Regex must have a "Cursor" group for this to work, and start with "^"
-func Regex(regex *regexp.Regexp, times int) Movement {
+// NOTE: RegexCursor must have a "Cursor" group for this to work, and start with "^"
+func RegexCursor(regex *regexp.Regexp, times int) Movement {
 	if times < 0 {
 		times--
 	}
@@ -133,6 +133,51 @@ func Regex(regex *regexp.Regexp, times int) Movement {
 	}
 }
 
+// NOTE: Regex must start with "^"
+func Regex(regex *regexp.Regexp, times int) Movement {
+	return func(editor *Editor, cursor Cursor) Cursor {
+		reader := NewEditorReader(editor, cursor.Start.Row, cursor.Start.Column)
+		timesLeft := abs(times)
+		var endRow, endCol int
+
+		for timesLeft > 0 {
+			var err error
+			if times > 0 {
+				_, _, err = reader.ReadRune()
+			} else {
+				_, _, err = reader.UnreadRune()
+			}
+
+			row, col := reader.GetLocation()
+
+			if row == -1 || err != nil{
+				break
+			}
+
+			found := regex.MatchReader(reader)
+			reader.UnreadRune()
+			reader.UnreadRune()
+			endRow, endCol = reader.GetLocation()
+
+			reader.SetLocation(row, col)
+
+			if found {
+				timesLeft--
+			}
+		}
+		row, col := reader.GetLocation()
+		cursor.Start.Row = row
+		cursor.End.Row = endRow
+		cursor.Start.Column = col
+		cursor.End.Column = endCol
+		if comesFirst(cursor.End, cursor.Start) {
+			cursor.End = cursor.Start
+			cursor.End.Column += 1
+		}
+		return cursor
+	}
+}
+
 func abs(a int) int {
 	if a > 0 {
 		return a
@@ -141,7 +186,7 @@ func abs(a int) int {
 }
 
 func Words(words int) Movement {
-	return Regex(regexp.MustCompile(`^\s(?P<Cursor>)\S`), words)
+	return RegexCursor(regexp.MustCompile(`^\s(?P<Cursor>)\S`), words)
 }
 
 func GoTo(movement Movement) Edit {
@@ -256,4 +301,8 @@ func isWithinACursor(editor *Editor, cursor *Cursor) bool {
 			}
 	}
 	return false
+}
+
+func comesFirst(a Location, b Location) bool {
+	return !(a.Row > b.Row || (a.Row == b.Row && a.Column >= b.Column))
 }

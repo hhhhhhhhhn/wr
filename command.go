@@ -5,6 +5,7 @@ import (
 	"strings"
 	"os/exec"
 	"io"
+	"fmt"
 
 	"github.com/hhhhhhhhhn/hexes"
 	"github.com/hhhhhhhhhn/hexes/input"
@@ -124,5 +125,15 @@ var commands = map[string] func([]string)(output string, ok bool) {
 				editor.Buffer.Current.Insert(i, [][]rune{[]rune(line)})
 		}
 		return "", false
+	},
+	"cursor": func(args []string) (string, bool) {
+		cursor := editor.Cursors[len(editor.Cursors)-1]
+		return fmt.Sprintf(
+			"from row %v, col %v to row %v, col %v",
+			cursor.Start.Row,
+			cursor.Start.Column,
+			cursor.End.Row,
+			cursor.End.Column,
+		), true
 	},
 }

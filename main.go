@@ -50,8 +50,6 @@ var attrStatus    = hexes.Join(hexes.NORMAL, hexes.REVERSE)
 func main() {
 	f := getFlags()
 	buffer := loadBuffer(f.file)
-	//buffer := core.NewBuffer()
-	//buffer.Current = buffer.Current.Insert(0, [][]rune{{}})
 	editor = &core.Editor{
 		Buffer: buffer,
 		Config: core.EditorConfig{Tabsize: 4},

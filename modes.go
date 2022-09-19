@@ -332,6 +332,14 @@ func newCursorMode() {
 func insertMode() {
 	pushMode("insert")
 	defer popMode()
+
+	editor.MarkUndo()
+	for len(editor.Cursors) > 50 {
+		core.RemoveCursor(editor.Cursors[0])(editor)
+	}
+	edits := []core.Edit{}
+	do := func(e core.Edit) {edits = append(edits, e); e(editor)}
+
 	for {
 		PrintEditor(editor, renderer)
 		event := getEvent()
@@ -340,23 +348,27 @@ func insertMode() {
 		}
 		switch(event.Chr) {
 		case input.ESCAPE:
+			editor.Undo()
+			for _, edit := range edits {
+				edit(editor)
+			}
 			return
 		case input.BACKSPACE:
-			core.GoTo(core.Chars(-1))(editor)
-			core.AsEdit(core.Delete)(editor)
+			do(core.GoTo(core.Chars(-1)))
+			do(core.AsEdit(core.Delete))
 			break
 		case '\n':
-			core.AsEdit(core.SmartSplit)(editor) // FIXME: Add to indentation
+			do(core.AsEdit(core.SmartSplit))
 		default:
 			if unicode.IsGraphic(event.Chr) || event.Chr == '\t' {
-				core.AsEdit(core.Insert([]rune{event.Chr}))(editor)
+				do(core.AsEdit(core.Insert([]rune{event.Chr})))
 			} else {
-				core.AsEdit(core.Insert([]rune(fmt.Sprint(event.Chr))))(editor)
+				do(core.AsEdit(core.Insert([]rune(fmt.Sprint(event.Chr)))))
 			}
 			break
 		}
 		if len(editor.Cursors) == 0 {
-			core.SetCursors(0, 0, 0, 1)(editor)
+			do(core.SetCursors(0, 0, 0, 1))
 		}
 	}
 }

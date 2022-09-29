@@ -53,6 +53,17 @@ func getMultiplier() int {
 	}
 }
 
+func getRegister() int {
+	event := getEvent()
+	for event.EventType != input.KeyPressed {
+		event = getEvent()
+	}
+	if event.Chr - 'a' < 0 || event.Chr - 'a' > 30 {
+		return 0
+	}
+	return int(event.Chr - 'a')
+}
+
 func normalGetMovement() (movement core.Movement, ok bool) {
 	multiplier := getMultiplier()
 	event := getEvent()
@@ -206,10 +217,10 @@ func baseActions(char rune) (ok bool) {
 			core.AsEdit(core.Delete)(editor)
 		}
 	case 'y':
-		core.AsEdit(core.Yank(0))(editor)
+		core.AsEdit(core.Yank(getRegister()))(editor)
 		break
 	case 'p':
-		core.AsEdit(core.Paste(0))(editor)
+		core.AsEdit(core.Paste(getRegister()))(editor)
 		break
 	case ':':
 		commandMode()

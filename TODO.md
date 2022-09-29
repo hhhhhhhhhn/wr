@@ -1,7 +1,6 @@
 # TODO
 - Extra movements (gg, G)
 - Remove last visible line
-- Make select not include empty space forwards
 
 ## Done
 - Visually represent when command fails (red statusbar)
@@ -13,3 +12,4 @@
 - Make regex select entire match
 - Insert mode optimisation
 - Register selection
+- Make select not include empty space forwards

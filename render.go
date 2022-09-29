@@ -36,8 +36,7 @@ func getLineAsString(e *core.Editor, row int) string {
 }
 
 func printLine(e *core.Editor, r *hexes.Renderer, row int) {
-	line := getLineAsString(e, row)
-	line = padWithSpaces(line, core.ColumnSpan(e, []rune(line)), r.Cols)
+	line := getLineAsString(e, row) + " "
 
 	col := 0
 	for _, chr := range line {
@@ -53,6 +52,12 @@ func printLine(e *core.Editor, r *hexes.Renderer, row int) {
 		}
 		r.SetString(row - scroll, col, string(chr))
 		col += core.RuneWidth(e, chr)
+	}
+
+	r.SetAttribute(attrDefault)
+	for col < r.Cols {
+		r.Set(row - scroll, col, ' ')
+		col += 1
 	}
 }
 

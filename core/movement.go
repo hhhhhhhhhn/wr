@@ -45,6 +45,16 @@ func Unselect(_ *Editor, cursor Cursor) Cursor {
 	return cursor
 }
 
+func Position(startRow, startCol, endRow, endCol int) Movement {
+	return func(editor *Editor, cursor Cursor) Cursor {
+		cursor.Start.Row = startRow
+		cursor.Start.Column = startCol
+		cursor.End.Row = endRow
+		cursor.End.Column = endCol
+		return cursor
+	}
+}
+
 func Chars(chars int) Movement {
 	return func(editor *Editor, cursor Cursor) Cursor {
 		line := editor.Buffer.GetLine(cursor.Start.Row)

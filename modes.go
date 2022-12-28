@@ -267,14 +267,25 @@ func normalMode() {
 
 		switch event.Chr {
 		case input.ESCAPE:
-			cursors := len(editor.Cursors)
-			for i := 0; i < cursors - 1; i++ {
-				core.RemoveCursor(editor.Cursors[0])(editor)
-			}
+			core.OnlyMainCursor(editor)
 			core.GoTo(core.Unselect)(editor)
 			break
+		case 'g':
+			if getEvent().Chr == 'g' {
+				core.OnlyMainCursor(editor)
+				core.GoTo(core.Position(0, 0, 0, 1))(editor)
+			}
+			break
+		case 'G':
+			length := editor.Buffer.GetLength()
+			if length == 0 {
+				break
+			}
+			core.OnlyMainCursor(editor)
+			core.GoTo(core.Position(length-1, 0, length-1, 1))(editor)
 		default:
 			baseActions(event.Chr)
+			break
 		}
 	}
 }

@@ -301,6 +301,13 @@ func isInBounds(editor *Editor, location Location) bool {
 	return true
 }
 
+func OnlyMainCursor(editor *Editor) {
+	cursorsLength := len(editor.Cursors)
+	for i := 0; i < cursorsLength-1; i++ {
+		RemoveCursor(editor.Cursors[0])(editor)
+	}
+}
+
 // Set cursors in StartRow, StartCol, EndRow, EndCol notation
 func SetCursors(locations ...int) Edit {
 	return func(editor *Editor) {

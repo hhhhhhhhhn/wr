@@ -176,6 +176,11 @@ func baseActions(char rune) (ok bool) {
 		memoryProfile()
 		return true
 	case 'c':
+		editor.MarkUndo()
+		core.AsEdit(core.Delete)(editor)
+		insertMode()
+		break
+	case 'C':
 		toggleCpuProf()
 		return true
 	case 'i':

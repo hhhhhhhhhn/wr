@@ -12,14 +12,15 @@ import (
 	"github.com/hhhhhhhhhn/wr/core"
 )
 
-func commandMode() {
+func commandMode(command string) {
 	buffer := core.NewBuffer()
-	buffer.Current = buffer.Current.Insert(0, [][]rune{{}})
+	buffer.Current = buffer.Current.Insert(0, [][]rune{[]rune(command)})
 	commandEditor := &core.Editor{Buffer: buffer}
+	col := core.ColumnSpan(commandEditor, buffer.GetLine(0))
 
 	for {
 		if len(commandEditor.Cursors) != 1 {
-			core.SetCursors(0, 0, 0, 1)(commandEditor)
+			core.SetCursors(0, col, 0, col+1)(commandEditor)
 		}
 		command := getLineAsString(commandEditor, 0)
 		printCommand(renderer, command)

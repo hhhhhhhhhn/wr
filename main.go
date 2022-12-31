@@ -72,10 +72,14 @@ func loadBuffer(filename string) *core.Buffer {
 	if err == nil {
 		lines := strings.Split(string(contents), "\n")
 		for i, line := range lines {
+			// NOTE: Equivalent to buffer.AddLine, but faster
 			buffer.Current = buffer.Current.Insert(i, [][]rune{[]rune(line)})
 		}
 	} else {
 		buffer.Current = buffer.Current.Insert(0, [][]rune{{}})
+	}
+	if buffer.GetLength() > 0 {
+		buffer.RemoveLine(buffer.GetLength()-1)
 	}
 	return buffer
 }

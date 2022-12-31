@@ -138,12 +138,6 @@ func visualGetMovement() (movement core.Movement, ok bool) {
 	}
 }
 
-func quit() {
-	renderer.End()
-	out.Flush()
-	os.Exit(0)
-}
-
 func baseActions(char rune) (ok bool) {
 	switch(char) {
 	case 'u':
@@ -172,14 +166,9 @@ func baseActions(char rune) (ok bool) {
 	case 22: // <C-v>
 		newCursorMode()
 		return true
-	case 'm':
+	case 'M':
 		memoryProfile()
 		return true
-	case 'c':
-		editor.MarkUndo()
-		core.AsEdit(core.Delete)(editor)
-		insertMode()
-		break
 	case 'C':
 		toggleCpuProf()
 		return true
@@ -221,6 +210,23 @@ func baseActions(char rune) (ok bool) {
 			core.SelectUntil(movement)(editor)
 			core.AsEdit(core.Delete)(editor)
 		}
+	case 'c':
+		if movement, ok := normalGetMovement(); ok {
+			editor.MarkUndo()
+			core.SelectUntil(movement)(editor)
+			core.AsEdit(core.Delete)(editor)
+			insertMode()
+		}
+		break
+	case 's':
+		editor.MarkUndo()
+		core.AsEdit(core.Delete)(editor)
+		insertMode()
+		break
+	case 'x':
+		editor.MarkUndo()
+		core.AsEdit(core.Delete)(editor)
+		break
 	case 'y':
 		core.AsEdit(core.Yank(getRegister()))(editor)
 		break
@@ -228,18 +234,12 @@ func baseActions(char rune) (ok bool) {
 		core.AsEdit(core.Paste(getRegister()))(editor)
 		break
 	case ':':
-		commandMode()
+		commandMode("")
+	case '/':
+		commandMode("/")
 	}
 	return false
 }
-
-var defaultCursor = core.Cursor{
-	Range: core.Range{
-		Start: core.Location{Row: 0, Column: 0},
-		End: core.Location{Row: 0, Column: 1},
-	},
-}
-
 
 func normalMode() {
 	pushMode("normal")
@@ -398,4 +398,17 @@ func insertMode() {
 			do(core.SetCursors(0, 0, 0, 1))
 		}
 	}
+}
+
+var defaultCursor = core.Cursor{
+	Range: core.Range{
+		Start: core.Location{Row: 0, Column: 0},
+		End: core.Location{Row: 0, Column: 1},
+	},
+}
+
+func quit() {
+	renderer.End()
+	out.Flush()
+	os.Exit(0)
 }

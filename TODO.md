@@ -1,5 +1,5 @@
 # TODO
-- Remove last visible line
+- Make regex start from end of cursor, not beginning
 
 ## Done
 - Visually represent when command fails (red statusbar)
@@ -13,3 +13,4 @@
 - Register selection
 - Make select not include empty space forwards
 - Extra movements (gg, G)
+- Remove last visible line

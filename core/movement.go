@@ -105,7 +105,7 @@ func RegexCursor(regex *regexp.Regexp, times int) Movement {
 		times--
 	}
 	return func(editor *Editor, cursor Cursor) Cursor {
-		reader := NewEditorReader(editor, cursor.Start.Row, cursor.Start.Column)
+		reader := NewEditorReader(editor, cursor.End.Row, cursor.End.Column)
 		timesLeft := abs(times)
 		eof := false
 		for timesLeft > 0 {
@@ -146,7 +146,7 @@ func RegexCursor(regex *regexp.Regexp, times int) Movement {
 // NOTE: Regex must start with "^"
 func Regex(regex *regexp.Regexp, times int) Movement {
 	return func(editor *Editor, cursor Cursor) Cursor {
-		reader := NewEditorReader(editor, cursor.Start.Row, cursor.Start.Column)
+		reader := NewEditorReader(editor, cursor.End.Row, cursor.End.Column)
 		timesLeft := abs(times)
 		var endRow, endCol int
 
@@ -178,7 +178,7 @@ func Regex(regex *regexp.Regexp, times int) Movement {
 		row, col := reader.GetLocation()
 		cursor.Start.Row = row
 		cursor.End.Row = endRow
-		cursor.Start.Column = col
+		cursor.Start.Column = col - 1
 		cursor.End.Column = endCol
 		if comesFirst(cursor.End, cursor.Start) {
 			cursor.End = cursor.Start

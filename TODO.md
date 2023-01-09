@@ -16,3 +16,4 @@
 - Extra movements (gg, G)
 - Remove last visible line
 - Make regex start from end of cursor, not beginning
+- Fix exiting not updating cursor

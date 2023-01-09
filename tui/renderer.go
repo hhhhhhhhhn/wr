@@ -62,6 +62,7 @@ func (t *Tui) RenderEditor(e *core.Editor) {
 
 func (t *Tui) End() {
 	t.renderer.End()
+	t.out.Flush()
 }
 
 var attrDefault   = hexes.NORMAL

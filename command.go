@@ -7,10 +7,11 @@ import (
 	"io"
 	"fmt"
 
-	"github.com/hhhhhhhhhn/hexes"
 	"github.com/hhhhhhhhhn/hexes/input"
 	"github.com/hhhhhhhhhn/wr/core"
 )
+
+var status = false
 
 func commandMode(command string) {
 	buffer := core.NewBuffer()
@@ -22,15 +23,16 @@ func commandMode(command string) {
 		if len(commandEditor.Cursors) != 1 {
 			core.SetCursors(0, col, 0, col+1)(commandEditor)
 		}
-		command := getLineAsString(commandEditor, 0)
-		printCommand(renderer, command)
+		command := string(commandEditor.Buffer.GetLine(0))
+		renderer.RenderCommand(command)
+		//printCommand(renderer, command)
 		event := getEvent()
 		for event.EventType != input.KeyPressed {
 			event = getEvent()
 		}
 		switch event.Chr {
 		case input.ENTER:
-			statusString, statusOk = runCommand(command)
+			statusText, statusOk = runCommand(command)
 			return
 		case input.ESCAPE:
 			return
@@ -46,17 +48,6 @@ func commandMode(command string) {
 	}
 }
 
-func printCommand(r *hexes.Renderer, command string) {
-	row := r.Rows - 1
-	formatted := padWithSpaces(":" + command, len(command), r.Cols)
-
-	r.SetAttribute(attrStatus)
-	r.SetString(row, 0, formatted)
-	r.SetAttribute(attrActive)
-	r.Set(row, len(command)+1, ' ')
-
-	out.Flush()
-}
 
 func runCommand(command string) (output string, ok bool) {
 	args := strings.Split(command, " ")

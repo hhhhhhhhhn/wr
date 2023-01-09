@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/hhhhhhhhhn/hexes/input"
 	"github.com/hhhhhhhhhn/wr/core"
@@ -157,8 +158,9 @@ func baseActions(char rune) (ok bool) {
 		quit()
 		return true
 	case 12: // <C-l>
-		renderer.Refresh()
-		out.Flush()
+		// TODO: Re-do with message
+		//renderer.Refresh()
+		//out.Flush()
 		return true
 	case 'v':
 		visualMode()
@@ -252,7 +254,7 @@ func normalMode() {
 		} else if !core.IsOOB(editor, editor.Cursors[len(editor.Cursors)-1]) {
 			lastCursor = *editor.Cursors[len(editor.Cursors)-1]
 		}
-		PrintEditor(editor, renderer)
+		renderer.RenderEditor(editor)
 
 		movement, ok := normalGetMovement()
 		if ok {
@@ -297,7 +299,7 @@ func visualMode() {
 		for len(editor.Cursors) == 0 {
 			core.SetCursors(0, 0, 0, 1)(editor)
 		}
-		PrintEditor(editor, renderer)
+		renderer.RenderEditor(editor)
 
 		movement, ok := visualGetMovement()
 		if ok {
@@ -332,7 +334,7 @@ func newCursorMode() {
 		for len(editor.Cursors) == 0 {
 			core.SetCursors(0, 0, 0, 1)(editor)
 		}
-		PrintEditor(editor, renderer)
+		renderer.RenderEditor(editor)
 
 		movement, ok := visualGetMovement()
 		if ok {
@@ -368,7 +370,7 @@ func insertMode() {
 	do := func(e core.Edit) {edits = append(edits, e); e(editor)}
 
 	for {
-		PrintEditor(editor, renderer)
+		renderer.RenderEditor(editor)
 		event := getEvent()
 		if event.EventType != input.KeyPressed {
 			continue
@@ -400,6 +402,26 @@ func insertMode() {
 	}
 }
 
+var modes = []string{}
+var statusText string
+var statusOk bool = true
+
+func pushMode(mode string) {
+	modes = append(modes, mode)
+	updateStatusText()
+}
+
+func popMode() {
+	modes = modes[:len(modes)-1]
+	updateStatusText()
+}
+
+func updateStatusText() {
+	statusText = strings.Join(modes, " > ")
+	statusOk = true
+	renderer.ChangeStatus(statusText, statusOk)
+}
+
 var defaultCursor = core.Cursor{
 	Range: core.Range{
 		Start: core.Location{Row: 0, Column: 0},
@@ -409,6 +431,5 @@ var defaultCursor = core.Cursor{
 
 func quit() {
 	renderer.End()
-	out.Flush()
 	os.Exit(0)
 }

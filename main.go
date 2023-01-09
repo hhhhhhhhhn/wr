@@ -1,25 +1,21 @@
 package main
 
 import (
-	"bufio"
 	"os"
 	"regexp"
 	"runtime"
 	"runtime/pprof"
 	"strings"
 
-	"github.com/hhhhhhhhhn/hexes"
 	"github.com/hhhhhhhhhn/hexes/input"
 	"github.com/hhhhhhhhhn/wr/core"
+	"github.com/hhhhhhhhhn/wr/tui"
 )
 
 var scroll = 0
-var out = bufio.NewWriterSize(os.Stdout, 4096)
-var in  = bufio.NewReader(os.Stdin)
 var editor *core.Editor
-var renderer *hexes.Renderer
-var listener  *input.Listener
-
+var renderer tui.Renderer
+var listener *input.Listener
 
 func memoryProfile() {
 	file, _ := os.Create("memprof")
@@ -41,12 +37,6 @@ func toggleCpuProf() {
 	}
 }
 
-var attrDefault   = hexes.NORMAL
-var attrStatusErr = hexes.Join(hexes.NORMAL, hexes.BOLD, hexes.BG_RED, hexes.REVERSE)
-var attrCursor    = hexes.Join(hexes.NORMAL, hexes.REVERSE)
-var attrActive    = hexes.Join(hexes.NORMAL, hexes.MAGENTA, hexes.REVERSE)
-var attrStatus    = hexes.Join(hexes.NORMAL, hexes.REVERSE)
-
 func main() {
 	f := getFlags()
 	buffer := loadBuffer(f.file)
@@ -58,10 +48,9 @@ func main() {
 			"Filename": f.file,
 		},
 	}
-	renderer = hexes.New(os.Stdin, out)
-	listener = input.New(in)
-	renderer.Start()
+	listener = input.New(os.Stdin)
 	core.SetCursors(0, 0, 0, 1)(editor)
+	renderer = tui.NewTui()
 
 	normalMode()
 }

@@ -1,4 +1,6 @@
 # TODO
+- Treesitter
+- Fix crash after running `!` command by removing OOB cursors
 
 ## Done
 - Visually represent when command fails (red statusbar)

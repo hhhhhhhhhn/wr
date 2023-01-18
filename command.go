@@ -125,4 +125,8 @@ var commands = map[string] func([]string)(output string, ok bool) {
 			cursor.End.Column,
 		), true
 	},
+	"tree": func([]string) (string, bool){
+		printCapturesToStderr()
+		return "", true
+	},
 }

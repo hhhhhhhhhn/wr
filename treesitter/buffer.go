@@ -171,25 +171,30 @@ func (b *Buffer) GetCaptures(startRow, endRow int) [][]sitter.QueryCapture {
 		}
 	}
 
-	var capturesByLine [][]sitter.QueryCapture
+	capturesByLine := make([][]sitter.QueryCapture, endRow - startRow)
 
 	for _, capture := range captures {
-		if len(capturesByLine) == 0 {
-			capturesByLine = append(capturesByLine, []sitter.QueryCapture{capture})
-		} else if capturesByLine[len(capturesByLine) - 1][0].Node.StartPoint().Row < capture.Node.StartPoint().Row {
-			lastLine := capturesByLine[len(capturesByLine)-1]
-			lastCapture := lastLine[len(lastLine)-1]
-			capturesByLine = append(capturesByLine, []sitter.QueryCapture{lastCapture, capture})
-		} else {
-			capturesByLine[len(capturesByLine) - 1] = append(capturesByLine[len(capturesByLine) - 1], capture)
+		if capture.Node.StartPoint().Row < uint32(startRow) {
+			capturesByLine[0] = []sitter.QueryCapture{capture}
+		} else if capture.Node.StartPoint().Row >= uint32(endRow) {
+			continue
+		}
+
+		index := capture.Node.StartPoint().Row - uint32(startRow)
+		capturesByLine[index] = append(capturesByLine[index], capture)
+	}
+
+	for i := 1; i < len(capturesByLine); i++ {
+		if len(capturesByLine[i-1]) > 0 {
+			previousLineLastCapture := capturesByLine[i-1][len(capturesByLine[i-1])-1]
+			capturesByLine[i] = append([]sitter.QueryCapture{previousLineLastCapture}, capturesByLine[i]...)
 		}
 	}
-
-	for len(capturesByLine) < endRow - startRow {
-		capturesByLine = append(capturesByLine, capturesByLine[len(capturesByLine)-1])
-	}
-
 	return capturesByLine
+}
+
+func (b *Buffer) String() string {
+	return b.tree.RootNode().String()
 }
 
 func NewBuffer() *Buffer {

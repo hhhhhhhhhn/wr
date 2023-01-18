@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"regexp"
 	"runtime"
@@ -38,9 +39,12 @@ func toggleCpuProf() {
 	}
 }
 
+var printCapturesToStderr func()
+
 func main() {
 	f := getFlags()
 	buffer := treesitter.NewBuffer()
+	printCapturesToStderr = func() {fmt.Fprintln(os.Stderr, buffer.String(), "\n\n", buffer.GetCaptures(0, 10))} // DEBUG
 	loadBuffer(f.file, buffer)
 	editor = &core.Editor{
 		Buffer: buffer,

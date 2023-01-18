@@ -113,15 +113,23 @@ var syntax = []hexes.Attribute{
 	hexes.Join(hexes.NORMAL, hexes.CYAN),
 	hexes.Join(hexes.NORMAL, hexes.MAGENTA),
 	hexes.Join(hexes.NORMAL, hexes.YELLOW),
+	hexes.Join(hexes.NORMAL),
+	hexes.Join(hexes.NORMAL, hexes.ITALIC, hexes.RED),
+	hexes.Join(hexes.NORMAL, hexes.ITALIC, hexes.GREEN),
+	hexes.Join(hexes.NORMAL, hexes.ITALIC, hexes.BLUE),
+	hexes.Join(hexes.NORMAL, hexes.ITALIC, hexes.CYAN),
+	hexes.Join(hexes.NORMAL, hexes.ITALIC, hexes.MAGENTA),
+	hexes.Join(hexes.NORMAL, hexes.ITALIC, hexes.YELLOW),
 }
 
 func printLine(e *core.Editor, r *hexes.Renderer, c []sitter.QueryCapture, row, scroll int) {
-	line := getLineAsString(e, row) + " "
+	line := e.Buffer.GetLine(row)
+	line = append(line, ' ')
 
 	col := 0
 	byt := 0
 	for _, chr := range line {
-		if len(c) > 1 && c[len(c)-1].Node.StartPoint().Column >= uint32(byt) {
+		for len(c) > 1 && byt >= int(c[1].Node.StartPoint().Column) {
 			c = c[1:]
 		}
 
@@ -132,10 +140,14 @@ func printLine(e *core.Editor, r *hexes.Renderer, c []sitter.QueryCapture, row, 
 			} else {
 				r.SetAttribute(attrCursor)
 			}
-		} else {
+		} else if len(c) > 0 {
 			r.SetAttribute(syntax[int(c[0].Index) % len(syntax)])
 		}
-		r.SetString(row - scroll, col, string(chr))
+		if chr == '\t' {
+			r.SetString(row - scroll, col, strings.Repeat(" ", e.Config.Tabsize))
+		} else {
+			r.SetString(row - scroll, col, string(chr))
+		}
 		col += core.RuneWidth(e, chr)
 		byt += utf8.RuneLen(chr)
 	}

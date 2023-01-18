@@ -136,6 +136,62 @@ func (b *Buffer) UpdateTreesitter() {
 	b.tree = b.parser.ParseInput(b.tree, b.input)
 }
 
+func (b *Buffer) GetCaptures(startRow, endRow int) [][]sitter.QueryCapture {
+	b.queryCursor.SetPointRange(
+		sitter.Point{
+			Row: uint32(startRow),
+			Column: 0,
+		},
+		sitter.Point{
+			Row: uint32(endRow),
+			Column: 0,
+		},
+	)
+
+	b.queryCursor.Exec(b.query, b.tree.RootNode())
+
+	var captures []sitter.QueryCapture
+
+	for true {
+		match, ok := b.queryCursor.NextMatch()
+		if !ok {
+			break
+		}
+		for _, capture := range match.Captures {
+			if len(captures) > 0 {
+				lastCapture := captures[len(captures)-1]
+				if intersects(capture, lastCapture) &&
+					len(b.query.CaptureNameForId(capture.Index)) >= len(b.query.CaptureNameForId(lastCapture.Index)) {
+						captures[len(captures)-1] = capture
+						continue
+				}
+			}
+
+			captures = append(captures, capture)
+		}
+	}
+
+	var capturesByLine [][]sitter.QueryCapture
+
+	for _, capture := range captures {
+		if len(capturesByLine) == 0 {
+			capturesByLine = append(capturesByLine, []sitter.QueryCapture{capture})
+		} else if capturesByLine[len(capturesByLine) - 1][0].Node.StartPoint().Row < capture.Node.StartPoint().Row {
+			lastLine := capturesByLine[len(capturesByLine)-1]
+			lastCapture := lastLine[len(lastLine)-1]
+			capturesByLine = append(capturesByLine, []sitter.QueryCapture{lastCapture, capture})
+		} else {
+			capturesByLine[len(capturesByLine) - 1] = append(capturesByLine[len(capturesByLine) - 1], capture)
+		}
+	}
+
+	for len(capturesByLine) < endRow - startRow {
+		capturesByLine = append(capturesByLine, capturesByLine[len(capturesByLine)-1])
+	}
+
+	return capturesByLine
+}
+
 func NewBuffer() *Buffer {
 	query, _ := sitter.NewQuery([]byte(query), javascript.GetLanguage())
 

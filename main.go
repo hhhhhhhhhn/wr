@@ -9,8 +9,8 @@ import (
 
 	"github.com/hhhhhhhhhn/hexes/input"
 	"github.com/hhhhhhhhhn/wr/core"
-	"github.com/hhhhhhhhhn/wr/tui"
 	"github.com/hhhhhhhhhn/wr/treesitter"
+	"github.com/hhhhhhhhhn/wr/tui"
 )
 
 var scroll = 0
@@ -52,7 +52,7 @@ func main() {
 	}
 	listener = input.New(os.Stdin)
 	core.SetCursors(0, 0, 0, 1)(editor)
-	renderer = tui.NewTui()
+	renderer = treesitter.NewTui(buffer)
 
 	normalMode()
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/hhhhhhhhhn/hexes/input"
 	"github.com/hhhhhhhhhn/wr/core"
 	"github.com/hhhhhhhhhn/wr/tui"
+	"github.com/hhhhhhhhhn/wr/treesitter"
 )
 
 var scroll = 0
@@ -39,7 +40,8 @@ func toggleCpuProf() {
 
 func main() {
 	f := getFlags()
-	buffer := loadBuffer(f.file)
+	buffer := treesitter.NewBuffer()
+	loadBuffer(f.file, buffer)
 	editor = &core.Editor{
 		Buffer: buffer,
 		Config: core.EditorConfig{Tabsize: 4},
@@ -55,20 +57,17 @@ func main() {
 	normalMode()
 }
 
-func loadBuffer(filename string) *core.Buffer {
-	buffer := core.NewBuffer()
+func loadBuffer(filename string, buffer core.Buffer) {
 	contents, err := os.ReadFile(filename)
 	if err == nil {
 		lines := strings.Split(string(contents), "\n")
 		for i, line := range lines {
-			// NOTE: Equivalent to buffer.AddLine, but faster
-			buffer.Current = buffer.Current.Insert(i, [][]rune{[]rune(line)})
+			buffer.AddLine(i, []rune(line))
 		}
 	} else {
-		buffer.Current = buffer.Current.Insert(0, [][]rune{{}})
+		buffer.AddLine(0, []rune{})
 	}
 	if buffer.GetLength() > 0 {
 		buffer.RemoveLine(buffer.GetLength()-1)
 	}
-	return buffer
 }

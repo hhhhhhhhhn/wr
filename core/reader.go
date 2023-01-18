@@ -12,7 +12,6 @@ type EditorReader struct {
 	eof           bool
 	currentLine   []rune
 	pendingBytes  []byte
-
 }
 
 func (e *EditorReader) Read(out []byte) (read int, err error) {

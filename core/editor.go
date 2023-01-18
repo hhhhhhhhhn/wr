@@ -15,7 +15,7 @@ type Cursor struct {
 }
 
 type Editor struct {
-	Buffer          *Buffer
+	Buffer          Buffer
 	History         []Version
 	HistoryIndex    int
 	Cursors         []*Cursor

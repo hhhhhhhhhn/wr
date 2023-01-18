@@ -4,26 +4,36 @@ import (
 	. "github.com/hhhhhhhhhn/rope"
 )
 
+type Buffer interface {
+	AddLine(index int, line []rune)
+	RemoveLine(index int)
+	ChangeLine(index int, line []rune)
+	GetLine(index int) []rune
+	GetLength() int
+	Backup(destination Version)
+	Restore(source Version)
+}
+
 type BufferValue = *Rope[[]rune]
 type Version = int
 
-type Buffer struct {
+type BaseBuffer struct {
 	Uri      string
 	Current  BufferValue
 	Versions map[Version]BufferValue
 }
 
-func (b *Buffer) AddLine(index int, line []rune) {
+func (b *BaseBuffer) AddLine(index int, line []rune) {
 	lineCopy := make([]rune, len(line))
 	copy(lineCopy, line)
 	b.Current = b.Current.Insert(index, [][]rune{line})
 }
 
-func (b *Buffer) RemoveLine(index int) {
+func (b *BaseBuffer) RemoveLine(index int) {
 	b.Current = b.Current.Remove(index, index+1)
 }
 
-func (b *Buffer) ChangeLine(index int, line []rune) {
+func (b *BaseBuffer) ChangeLine(index int, line []rune) {
 	lineCopy := make([]rune, len(line))
 	copy(lineCopy, line)
 	b.Current = b.Current.Replace(index, [][]rune{line})
@@ -31,24 +41,26 @@ func (b *Buffer) ChangeLine(index int, line []rune) {
 
 // NOTE: Be VERY CAREFUL, for performance reasons, this sends the line
 // by reference, so mutating it will change the actual buffer
-func (b *Buffer) GetLine(index int) []rune {
+func (b *BaseBuffer) GetLine(index int) []rune {
 	return b.Current.Slice(index, index + 1)[0]
 }
 
-func (b *Buffer) GetLength() int {
+func (b *BaseBuffer) GetLength() int {
 	return b.Current.Length()
 }
 
-func (b *Buffer) Backup(destination Version) {
+func (b *BaseBuffer) Backup(destination Version) {
 	b.Versions[destination] = b.Current
 }
 
-func (b *Buffer) Restore(source Version) {
+func (b *BaseBuffer) Restore(source Version) {
 	b.Current = b.Versions[source]
 }
 
-func NewBuffer() *Buffer {
-	return &Buffer{
+var _ Buffer = (*BaseBuffer)(nil) // Type Checking
+
+func NewBuffer() *BaseBuffer {
+	return &BaseBuffer{
 		Current: NewRope([][]rune{}, DefaultSettings),
 		Versions: make(map[Version]BufferValue),
 	}

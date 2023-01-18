@@ -11,8 +11,6 @@ import (
 	"github.com/hhhhhhhhhn/wr/core"
 )
 
-var status = false
-
 func commandMode(command string) {
 	buffer := core.NewBuffer()
 	buffer.Current = buffer.Current.Insert(0, [][]rune{[]rune(command)})
@@ -110,11 +108,10 @@ var commands = map[string] func([]string)(output string, ok bool) {
 		editor.MarkUndo()
 		// FIXME: This is a horribly unefficient way to do this
 		for editor.Buffer.GetLength() > 0 {
-			editor.Buffer.Current = editor.Buffer.Current.Remove(0, 1)
+			editor.Buffer.RemoveLine(0)
 		}
 		for i, line := range strings.Split(string(stdout), "\n") {
-			editor.Buffer.Current =
-				editor.Buffer.Current.Insert(i, [][]rune{[]rune(line)})
+			editor.Buffer.AddLine(i, []rune(line))
 		}
 		return "", false
 	},

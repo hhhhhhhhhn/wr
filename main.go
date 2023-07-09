@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"regexp"
 	"runtime"
@@ -9,15 +8,18 @@ import (
 	"strings"
 
 	"github.com/hhhhhhhhhn/hexes/input"
+	"github.com/hhhhhhhhhn/hexes"
 	"github.com/hhhhhhhhhn/wr/core"
 	"github.com/hhhhhhhhhn/wr/treesitter"
 	"github.com/hhhhhhhhhn/wr/tui"
+	"github.com/smacker/go-tree-sitter/javascript"
 )
 
 var scroll = 0
 var editor *core.Editor
 var renderer tui.Renderer
 var listener *input.Listener
+var buffer   *treesitter.Buffer
 
 func memoryProfile() {
 	file, _ := os.Create("memprof")
@@ -39,12 +41,9 @@ func toggleCpuProf() {
 	}
 }
 
-var printCapturesToStderr func()
-
 func main() {
 	f := getFlags()
-	buffer := treesitter.NewBuffer()
-	printCapturesToStderr = func() {fmt.Fprintln(os.Stderr, buffer.String(), "\n\n", buffer.GetCaptures(0, 10))} // DEBUG
+	buffer = treesitter.NewBuffer(javascript.GetLanguage())
 	loadBuffer(f.file, buffer)
 	editor = &core.Editor{
 		Buffer: buffer,
@@ -56,7 +55,7 @@ func main() {
 	}
 	listener = input.New(os.Stdin)
 	core.SetCursors(0, 0, 0, 1)(editor)
-	renderer = treesitter.NewTui(buffer)
+	renderer = treesitter.NewTui(buffer, getAttribute)
 
 	normalMode()
 }
@@ -75,3 +74,18 @@ func loadBuffer(filename string, buffer core.Buffer) {
 		buffer.RemoveLine(buffer.GetLength()-1)
 	}
 }
+
+func getAttribute(name string) hexes.Attribute {
+	switch name {
+	case "string":
+		return hexes.Join(hexes.NORMAL, hexes.BLUE, hexes.ITALIC)
+	case "comment":
+		return hexes.Join(hexes.NORMAL, hexes.BLACK, hexes.BOLD, hexes.ITALIC)
+	case "keyword":
+		return hexes.Join(hexes.NORMAL, hexes.GREEN)
+	case "number":
+		return hexes.Join(hexes.NORMAL, hexes.CYAN)
+	}
+	return hexes.NORMAL
+}
+

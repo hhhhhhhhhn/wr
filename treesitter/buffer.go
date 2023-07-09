@@ -4,7 +4,6 @@ import (
 	"github.com/hhhhhhhhhn/wr/core"
 	"github.com/hhhhhhhhhn/rope"
 	sitter "github.com/smacker/go-tree-sitter"
-	"github.com/smacker/go-tree-sitter/javascript"
 )
 
 type Buffer struct {
@@ -193,12 +192,16 @@ func (b *Buffer) GetCaptures(startRow, endRow int) [][]sitter.QueryCapture {
 	return capturesByLine
 }
 
+func (b *Buffer) GetCaptureName(c sitter.QueryCapture) string {
+	return b.query.CaptureNameForId(c.Index)
+}
+
 func (b *Buffer) String() string {
 	return b.tree.RootNode().String()
 }
 
-func NewBuffer() *Buffer {
-	query, _ := sitter.NewQuery([]byte(query), javascript.GetLanguage())
+func NewBuffer(language *sitter.Language) *Buffer {
+	query, _ := sitter.NewQuery([]byte(query), language)
 
 	buffer := &Buffer{}
 	buffer.base              = core.NewBuffer()
@@ -207,7 +210,7 @@ func NewBuffer() *Buffer {
 	buffer.query             = query
 	buffer.queryCursor       = sitter.NewQueryCursor()
 	buffer.parser            = sitter.NewParser()
-	buffer.parser.SetLanguage(javascript.GetLanguage())
+	buffer.parser.SetLanguage(language)
 	buffer.tree              = buffer.parser.Parse(nil, []byte("\n"))
 	buffer.input             = sitter.Input {
 		Encoding: sitter.InputEncodingUTF8,

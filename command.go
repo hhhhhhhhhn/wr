@@ -31,6 +31,7 @@ func commandMode(command string) {
 		switch event.Chr {
 		case input.ENTER:
 			statusText, statusOk = runCommand(command)
+			renderer.ChangeStatus(statusText, statusOk)
 			return
 		case input.ESCAPE:
 			return
@@ -125,8 +126,12 @@ var commands = map[string] func([]string)(output string, ok bool) {
 			cursor.End.Column,
 		), true
 	},
-	"tree": func([]string) (string, bool){
-		printCapturesToStderr()
-		return "", true
+	"treesitter": func([]string) (string, bool){
+		captures := buffer.GetCaptures(scroll, scroll + 1)
+		output := ""
+		for _, c := range captures[0] {
+			output += buffer.GetCaptureName(c) + " "
+		}
+		return output, true
 	},
 }

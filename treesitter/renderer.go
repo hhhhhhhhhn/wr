@@ -26,9 +26,10 @@ type Tui struct {
 	scroll       int
 	statusText   string
 	statusOk     bool
+	getAttribute func(string) hexes.Attribute
 }
 
-func NewTui(buffer *Buffer) *Tui {
+func NewTui(buffer *Buffer, getAttribute func(string) hexes.Attribute) *Tui {
 	out := bufio.NewWriterSize(os.Stdout, 4096)
 	in  := os.Stdin
 	renderer := hexes.New(in, out)
@@ -41,6 +42,7 @@ func NewTui(buffer *Buffer) *Tui {
 		statusText: "",
 		statusOk: true,
 		buffer: buffer,
+		getAttribute: getAttribute,
 	}
 }
 
@@ -61,7 +63,7 @@ func (t *Tui) RenderEditor(e *core.Editor) {
 	t.buffer.UpdateTreesitter()
 	captures := t.buffer.GetCaptures(t.scroll, t.scroll + renderRows)
 	for row := t.scroll; row < t.scroll + renderRows && row < lineAmount; row++ {
-		printLine(e, t.renderer, captures[row - t.scroll], row, t.scroll)
+		printLine(e, t, captures[row - t.scroll], t.buffer.query, row, t.scroll)
 	}
 
 	printStatusBar(e, t.renderer, t.statusText, t.statusOk)
@@ -106,53 +108,40 @@ func getLineAsString(e *core.Editor, row int) string {
 	return strings.ReplaceAll(string(e.Buffer.GetLine(row)), "\t", strings.Repeat(" ", e.Config.Tabsize))
 }
 
-var syntax = []hexes.Attribute{
-	hexes.Join(hexes.NORMAL, hexes.RED),
-	hexes.Join(hexes.NORMAL, hexes.GREEN),
-	hexes.Join(hexes.NORMAL, hexes.BLUE),
-	hexes.Join(hexes.NORMAL, hexes.CYAN),
-	hexes.Join(hexes.NORMAL, hexes.MAGENTA),
-	hexes.Join(hexes.NORMAL, hexes.YELLOW),
-	hexes.Join(hexes.NORMAL),
-	hexes.Join(hexes.NORMAL, hexes.ITALIC, hexes.RED),
-	hexes.Join(hexes.NORMAL, hexes.ITALIC, hexes.GREEN),
-	hexes.Join(hexes.NORMAL, hexes.ITALIC, hexes.BLUE),
-	hexes.Join(hexes.NORMAL, hexes.ITALIC, hexes.CYAN),
-	hexes.Join(hexes.NORMAL, hexes.ITALIC, hexes.MAGENTA),
-	hexes.Join(hexes.NORMAL, hexes.ITALIC, hexes.YELLOW),
-}
-
-func printLine(e *core.Editor, r *hexes.Renderer, c []sitter.QueryCapture, row, scroll int) {
+func printLine(e *core.Editor, tui *Tui, captures []sitter.QueryCapture, query *sitter.Query, row, scroll int) {
 	line := e.Buffer.GetLine(row)
 	line = append(line, ' ')
 
 	col := 0
 	byt := 0
 	for _, chr := range line {
-		for len(c) > 1 && byt >= int(c[1].Node.StartPoint().Column) {
-			c = c[1:]
+		// Advances the captures
+		for len(captures) > 1 && byt >= int(captures[1].Node.StartPoint().Column) {
+			captures = captures[1:]
 		}
 
 		withinCursor, withinLast := isWithinCursor(e, row, col)
 		if withinCursor {
 			if withinLast {
-				r.SetAttribute(attrActive)
+				tui.renderer.SetAttribute(attrActive)
 			} else {
-				r.SetAttribute(attrCursor)
+				tui.renderer.SetAttribute(attrCursor)
 			}
-		} else if len(c) > 0 {
-			r.SetAttribute(syntax[int(c[0].Index) % len(syntax)])
+		} else if len(captures) > 0 {
+			name := query.CaptureNameForId(captures[0].Index)
+			// fmt.Fprintln(os.Stderr, name, captures[0].Index)
+			tui.renderer.SetAttribute(tui.getAttribute(name))
 		}
 		if chr == '\t' {
-			r.SetString(row - scroll, col, strings.Repeat(" ", e.Config.Tabsize))
+			tui.renderer.SetString(row - scroll, col, strings.Repeat(" ", e.Config.Tabsize))
 		} else {
-			r.SetString(row - scroll, col, string(chr))
+			tui.renderer.SetString(row - scroll, col, string(chr))
 		}
 		col += core.RuneWidth(e, chr)
 		byt += utf8.RuneLen(chr)
 	}
 
-	r.SetAttribute(attrDefault)
+	tui.renderer.SetAttribute(attrDefault)
 }
 
 func isWithinCursor(e *core.Editor, row, col int) (isWithin bool, isLast bool) {

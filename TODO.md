@@ -2,6 +2,7 @@
 - Treesitter
 - Fix crash after running `!` command by removing OOB cursors
 - Abstracting input
+- Better command interactivity
 - Show OOB cursors
 
 ## Done

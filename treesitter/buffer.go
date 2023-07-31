@@ -175,6 +175,7 @@ func (b *Buffer) GetCaptures(startRow, endRow int) [][]sitter.QueryCapture {
 	for _, capture := range captures {
 		if capture.Node.StartPoint().Row < uint32(startRow) {
 			capturesByLine[0] = []sitter.QueryCapture{capture}
+			continue
 		} else if capture.Node.StartPoint().Row >= uint32(endRow) {
 			continue
 		}

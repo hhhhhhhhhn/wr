@@ -127,7 +127,8 @@ var commands = map[string] func([]string)(output string, ok bool) {
 		), true
 	},
 	"treesitter": func([]string) (string, bool){
-		captures := buffer.GetCaptures(scroll, scroll + 1)
+    cursor := editor.Cursors[len(editor.Cursors)-1]
+		captures := buffer.GetCaptures(cursor.Start.Row, cursor.Start.Row+1)
 		output := ""
 		for _, c := range captures[0] {
 			output += buffer.GetCaptureName(c) + " "

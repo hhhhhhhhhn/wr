@@ -6,6 +6,10 @@ import (
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
+func intersects(a, b sitter.QueryCapture) bool {
+	return a.Node.StartByte() < b.Node.EndByte()
+}
+
 type Buffer struct {
 	base              core.Buffer
 	lineBytes         *rope.Rope[int]
@@ -202,7 +206,8 @@ func (b *Buffer) String() string {
 }
 
 func NewBuffer(language *sitter.Language) *Buffer {
-	query, _ := sitter.NewQuery([]byte(query), language)
+	queryscm, _ := GetQuery("c")
+	query, _ := sitter.NewQuery(queryscm, language)
 
 	buffer := &Buffer{}
 	buffer.base              = core.NewBuffer()

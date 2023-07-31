@@ -12,7 +12,7 @@ import (
 	"github.com/hhhhhhhhhn/wr/core"
 	"github.com/hhhhhhhhhn/wr/treesitter"
 	"github.com/hhhhhhhhhn/wr/tui"
-	"github.com/smacker/go-tree-sitter/javascript"
+	"github.com/smacker/go-tree-sitter/c"
 )
 
 var scroll = 0
@@ -43,7 +43,7 @@ func toggleCpuProf() {
 
 func main() {
 	f := getFlags()
-	buffer = treesitter.NewBuffer(javascript.GetLanguage())
+	buffer = treesitter.NewBuffer(c.GetLanguage())
 	loadBuffer(f.file, buffer)
 	editor = &core.Editor{
 		Buffer: buffer,
@@ -85,6 +85,8 @@ func getAttribute(name string) hexes.Attribute {
 		return hexes.Join(hexes.NORMAL, hexes.GREEN)
 	case "number":
 		return hexes.Join(hexes.NORMAL, hexes.CYAN)
+	case "type":
+		return hexes.Join(hexes.NORMAL, hexes.YELLOW)
 	}
 	return hexes.NORMAL
 }

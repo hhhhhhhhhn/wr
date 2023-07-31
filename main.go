@@ -12,7 +12,6 @@ import (
 	"github.com/hhhhhhhhhn/wr/core"
 	"github.com/hhhhhhhhhn/wr/treesitter"
 	"github.com/hhhhhhhhhn/wr/tui"
-	"github.com/smacker/go-tree-sitter/c"
 )
 
 var scroll = 0
@@ -43,7 +42,8 @@ func toggleCpuProf() {
 
 func main() {
 	f := getFlags()
-	buffer = treesitter.NewBuffer(c.GetLanguage())
+	lang, _ := treesitter.GetLanguage("rust")
+	buffer = treesitter.NewBuffer(*lang)
 	loadBuffer(f.file, buffer)
 	editor = &core.Editor{
 		Buffer: buffer,

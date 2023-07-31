@@ -205,9 +205,8 @@ func (b *Buffer) String() string {
 	return b.tree.RootNode().String()
 }
 
-func NewBuffer(language *sitter.Language) *Buffer {
-	queryscm, _ := GetQuery("c")
-	query, _ := sitter.NewQuery(queryscm, language)
+func NewBuffer(language Language) *Buffer {
+	query, _ := sitter.NewQuery(language.query, language.sitter)
 
 	buffer := &Buffer{}
 	buffer.base              = core.NewBuffer()
@@ -216,7 +215,7 @@ func NewBuffer(language *sitter.Language) *Buffer {
 	buffer.query             = query
 	buffer.queryCursor       = sitter.NewQueryCursor()
 	buffer.parser            = sitter.NewParser()
-	buffer.parser.SetLanguage(language)
+	buffer.parser.SetLanguage(language.sitter)
 	buffer.tree              = buffer.parser.Parse(nil, []byte("\n"))
 	buffer.input             = sitter.Input {
 		Encoding: sitter.InputEncodingUTF8,

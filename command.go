@@ -138,13 +138,17 @@ var commands = map[string] func([]string)(output string, ok bool) {
 	},
 	"language": func(args []string) (string, bool) {
 		if len(args) != 2 {
-			return "Please provide exactly one language", false
+			return "please provide exactly one language", false
 		}
 		lang, err := treesitter.GetLanguage(args[1])
 		if err != nil {
 			return err.Error(), false
 		}
 		buffer.SetLanguage(*lang)
-		return "Set language to " + args[1], true
+		return "set language to " + args[1], true
+	},
+	"syntax": func([]string) (string, bool) {
+		syntaxOn = !syntaxOn
+		return "", true
 	},
 }

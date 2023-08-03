@@ -19,6 +19,7 @@ var editor *core.Editor
 var renderer tui.Renderer
 var listener *input.Listener
 var buffer   *treesitter.Buffer
+var syntaxOn = true
 
 func memoryProfile() {
 	file, _ := os.Create("memprof")
@@ -76,6 +77,9 @@ func loadBuffer(filename string, buffer core.Buffer) {
 }
 
 func getAttribute(name string) hexes.Attribute {
+	if !syntaxOn {
+		return hexes.NORMAL
+	}
 	switch name {
 	case "string":
 		return hexes.Join(hexes.NORMAL, hexes.BLUE, hexes.ITALIC)

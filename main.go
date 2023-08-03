@@ -42,7 +42,7 @@ func toggleCpuProf() {
 
 func main() {
 	f := getFlags()
-	lang, _ := treesitter.GetLanguage("rust")
+	lang, _ := treesitter.GetLanguage("c")
 	buffer = treesitter.NewBuffer(*lang)
 	loadBuffer(f.file, buffer)
 	editor = &core.Editor{

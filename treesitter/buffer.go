@@ -205,14 +205,23 @@ func (b *Buffer) String() string {
 	return b.tree.RootNode().String()
 }
 
-func NewBuffer(language Language) *Buffer {
-	query, _ := sitter.NewQuery(language.query, language.sitter)
+func (b *Buffer) SetLanguage(language Language) error {
+	b.tree = nil
+	b.parser.SetLanguage(language.sitter)
+	query, err := sitter.NewQuery(language.query, language.sitter)
+	if err != nil {
+		return err
+	}
+	b.query = query
+	b.tree = b.parser.ParseInput(nil, b.input)
+	return nil
+}
 
+func NewBuffer(language Language) *Buffer {
 	buffer := &Buffer{}
 	buffer.base              = core.NewBuffer()
 	buffer.lineBytes         = rope.NewRope([]int{}, rope.DefaultSettings)
 	buffer.lineBytesVersions = make(map[core.Version]*rope.Rope[int])
-	buffer.query             = query
 	buffer.queryCursor       = sitter.NewQueryCursor()
 	buffer.parser            = sitter.NewParser()
 	buffer.parser.SetLanguage(language.sitter)
@@ -227,6 +236,8 @@ func NewBuffer(language Language) *Buffer {
 			return []byte((string(line) + "\n"))[position.Column:]
 		},
 	}
+
+	buffer.SetLanguage(language)
 
 	return buffer
 }

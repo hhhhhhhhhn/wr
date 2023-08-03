@@ -1,14 +1,15 @@
 package main
 
 import (
+	"fmt"
+	"io"
+	"os/exec"
 	"regexp"
 	"strings"
-	"os/exec"
-	"io"
-	"fmt"
 
 	"github.com/hhhhhhhhhn/hexes/input"
 	"github.com/hhhhhhhhhn/wr/core"
+	"github.com/hhhhhhhhhn/wr/treesitter"
 )
 
 func commandMode(command string) {
@@ -126,13 +127,24 @@ var commands = map[string] func([]string)(output string, ok bool) {
 			cursor.End.Column,
 		), true
 	},
-	"treesitter": func([]string) (string, bool){
-    cursor := editor.Cursors[len(editor.Cursors)-1]
+	"treesitter": func([]string) (string, bool) {
+		cursor := editor.Cursors[len(editor.Cursors)-1]
 		captures := buffer.GetCaptures(cursor.Start.Row, cursor.Start.Row+1)
 		output := ""
 		for _, c := range captures[0] {
 			output += buffer.GetCaptureName(c) + " "
 		}
 		return output, true
+	},
+	"language": func(args []string) (string, bool) {
+		if len(args) != 2 {
+			return "Please provide exactly one language", false
+		}
+		lang, err := treesitter.GetLanguage(args[1])
+		if err != nil {
+			return err.Error(), false
+		}
+		buffer.SetLanguage(*lang)
+		return "Set language to " + args[1], true
 	},
 }

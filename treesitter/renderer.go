@@ -110,7 +110,10 @@ func getLineAsString(e *core.Editor, row int) string {
 
 func printLine(e *core.Editor, tui *Tui, captures []sitter.QueryCapture, query *sitter.Query, row, scroll int) {
 	line := e.Buffer.GetLine(row)
-	line = append(line, ' ')
+	originalLineCols  := core.ColumnSpan(e, line)
+	if originalLineCols < tui.renderer.Cols {
+		line = append(line, []rune(strings.Repeat(" ", tui.renderer.Cols - originalLineCols))...)
+	}
 
 	col := 0
 	byt := 0
@@ -120,8 +123,8 @@ func printLine(e *core.Editor, tui *Tui, captures []sitter.QueryCapture, query *
 			captures = captures[1:]
 		}
 
-		withinCursor, withinLast := isWithinCursor(e, row, col)
-		if withinCursor {
+		withinCursor, withinLast, cursor := isWithinCursor(e, row, col)
+		if withinCursor && (col <= originalLineCols || (cursor.Start.Row == row && cursor.Start.Column > originalLineCols)) {
 			if withinLast {
 				tui.renderer.SetAttribute(attrActive)
 			} else {
@@ -144,7 +147,7 @@ func printLine(e *core.Editor, tui *Tui, captures []sitter.QueryCapture, query *
 	tui.renderer.SetAttribute(attrDefault)
 }
 
-func isWithinCursor(e *core.Editor, row, col int) (isWithin bool, isLast bool) {
+func isWithinCursor(e *core.Editor, row, col int) (isWithin bool, isLast bool, cursor *core.Cursor) {
 	var cursors []*core.Cursor
 	if len(e.Cursors) > 25 {
 		cursors = e.Cursors[len(e.Cursors)-25:]
@@ -156,12 +159,12 @@ func isWithinCursor(e *core.Editor, row, col int) (isWithin bool, isLast bool) {
 			((row == cursor.Start.Row && col >= cursor.Start.Column) || (row > cursor.Start.Row)) &&
 			((row == cursor.End.Row && col < cursor.End.Column) || (row < cursor.End.Row))){
 				if i == len(cursors) - 1 {
-					return true, true
+					return true, true, cursor
 				}
-				return true, false
+				return true, false, cursor
 			}
 	}
-	return false, false
+	return false, false, nil
 }
 
 func (t *Tui) ChangeStatus(text string, ok bool) {

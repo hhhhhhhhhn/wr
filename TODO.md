@@ -1,9 +1,7 @@
 # TODO
-- Treesitter
 - Fix crash after running `!` command by removing OOB cursors
 - Abstracting input
 - Better command interactivity
-- Show OOB cursors
 
 ## Done
 - Visually represent when command fails (red statusbar)
@@ -20,3 +18,5 @@
 - Remove last visible line
 - Make regex start from end of cursor, not beginning
 - Fix exiting not updating cursor
+- Treesitter
+- Show OOB cursors

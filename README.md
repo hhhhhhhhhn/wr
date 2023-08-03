@@ -31,5 +31,3 @@ Read this [article](https://hhhhhhhhhn.com/writings/a-reflection-on-vim-like-tex
 - It has tests for every component,
   which are consistent due to the functional style.
   Also, it is really easy to profile.
-- It has just over 1500 lines of code,
-  which are neatly divided into different modules.

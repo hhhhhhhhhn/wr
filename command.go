@@ -13,23 +13,29 @@ import (
 )
 
 func commandMode(command string) {
-	buffer := core.NewBuffer()
-	buffer.Current = buffer.Current.Insert(0, [][]rune{[]rune(command)})
-	commandEditor := &core.Editor{Buffer: buffer}
-	col := core.ColumnSpan(commandEditor, buffer.GetLine(0))
+	cursor := 0
 
 	for {
-		if len(commandEditor.Cursors) != 1 {
-			core.SetCursors(0, col, 0, col+1)(commandEditor)
-		}
-		command := string(commandEditor.Buffer.GetLine(0))
-		renderer.RenderCommand(command)
-		//printCommand(renderer, command)
+		renderer.RenderCommand(command, cursor)
 		event := getEvent()
 		for event.EventType != input.KeyPressed {
 			event = getEvent()
 		}
 		switch event.Chr {
+		case input.KEY_UP:
+			break
+		case input.KEY_DOWN:
+			break
+		case input.KEY_LEFT:
+			 if cursor > 0 {
+				 cursor--
+			 }
+			break
+		case input.KEY_RIGHT:
+			 if cursor < len(command) {
+				 cursor++
+			 }
+			break
 		case input.ENTER:
 			statusText, statusOk = runCommand(command)
 			renderer.ChangeStatus(statusText, statusOk)
@@ -37,12 +43,14 @@ func commandMode(command string) {
 		case input.ESCAPE:
 			return
 		case input.BACKSPACE:
-			core.GoTo(core.Chars(-1))(commandEditor)
-			core.SelectUntil(core.Chars(1))(commandEditor)
-			core.AsEdit(core.Delete)(commandEditor)
+			if cursor > 0 {
+				command = command[:cursor - 1] + command[cursor:]
+				cursor--
+			}
 			break
 		default:
-			core.AsEdit(core.Insert([]rune{event.Chr}))(commandEditor)
+			command = command[:cursor] + string(event.Chr) + command[cursor:]
+			cursor++
 			break
 		}
 	}

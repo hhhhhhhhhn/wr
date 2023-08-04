@@ -12,7 +12,7 @@ import (
 
 type Renderer interface {
 	RenderEditor(*core.Editor)
-	RenderCommand(string)
+	RenderCommand(string, int)
 	ChangeStatus(text string, ok bool)
 	End()
 }

@@ -9,15 +9,11 @@ import (
 
 	"github.com/hhhhhhhhhn/hexes"
 	"github.com/hhhhhhhhhn/wr/core"
+	"github.com/hhhhhhhhhn/wr/tui"
 	sitter "github.com/smacker/go-tree-sitter"
 )
 
-type Renderer interface {
-	RenderEditor(*core.Editor)
-	RenderCommand(string)
-	ChangeStatus(text string, ok bool)
-	End()
-}
+type Renderer = tui.Renderer
 
 type Tui struct {
 	out          *bufio.Writer
@@ -193,14 +189,17 @@ func printStatusBar(e *core.Editor, r *hexes.Renderer, statusText string, status
 	r.SetString(row, r.Cols-len(position), position)
 }
 
-func (t *Tui) RenderCommand(command string) {
+func (t *Tui) RenderCommand(command string, cursorPos int) {
 	row := t.renderer.Rows - 1
 	formatted := padWithSpaces(":" + command, len(command), t.renderer.Cols)
+	cursorPos = cursorPos+1
 
 	t.renderer.SetAttribute(attrStatus)
-	t.renderer.SetString(row, 0, formatted)
+	t.renderer.SetString(row, 0, formatted[:cursorPos])
 	t.renderer.SetAttribute(attrActive)
-	t.renderer.Set(row, len(command)+1, ' ')
+	t.renderer.SetString(row, cursorPos, formatted[cursorPos:cursorPos+1])
+	t.renderer.SetAttribute(attrStatus)
+	t.renderer.SetString(row, cursorPos+1, formatted[cursorPos+1:])
 
 	t.out.Flush()
 }

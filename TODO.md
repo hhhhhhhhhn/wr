@@ -1,7 +1,7 @@
 # TODO
 - Fix crash after running `!` command by removing OOB cursors
 - Abstracting input
-- Better command interactivity
+- Do something about inverted cursors
 
 ## Done
 - Visually represent when command fails (red statusbar)
@@ -20,3 +20,4 @@
 - Fix exiting not updating cursor
 - Treesitter
 - Show OOB cursors
+- Better command interactivity

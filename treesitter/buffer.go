@@ -20,6 +20,7 @@ type Buffer struct {
 	parser            *sitter.Parser
 	tree              *sitter.Tree
 	input             sitter.Input
+	treesitterIsValid bool
 }
 
 func (b *Buffer) AddLine(index int, line []rune) {
@@ -46,6 +47,8 @@ func (b *Buffer) AddLine(index int, line []rune) {
 			Column: 0,
 		},
 	})
+
+	b.treesitterIsValid = false
 }
 
 func (b *Buffer) RemoveLine(index int) {
@@ -72,6 +75,8 @@ func (b *Buffer) RemoveLine(index int) {
 			Column: 0,
 		},
 	})
+
+	b.treesitterIsValid = false
 }
 
 func (b *Buffer) ChangeLine(index int, line []rune) {
@@ -99,6 +104,8 @@ func (b *Buffer) ChangeLine(index int, line []rune) {
 			Column: uint32(newLineBytes),
 		},
 	})
+
+	b.treesitterIsValid = false
 }
 
 func (b *Buffer) GetLine(index int) []rune {
@@ -136,7 +143,10 @@ func (b *Buffer) Restore(source core.Version) {
 }
 
 func (b *Buffer) UpdateTreesitter() {
-	b.tree = b.parser.ParseInput(b.tree, b.input)
+	if !b.treesitterIsValid {
+		b.tree = b.parser.ParseInput(b.tree, b.input)
+		b.treesitterIsValid = true
+	}
 }
 
 func (b *Buffer) GetCaptures(startRow, endRow int) [][]sitter.QueryCapture {
@@ -226,6 +236,7 @@ func NewBuffer(language Language) *Buffer {
 	buffer.parser            = sitter.NewParser()
 	buffer.parser.SetLanguage(language.sitter)
 	buffer.tree              = buffer.parser.Parse(nil, []byte("\n"))
+	buffer.treesitterIsValid = false
 	buffer.input             = sitter.Input {
 		Encoding: sitter.InputEncodingUTF8,
 		Read: func(_offset uint32, position sitter.Point) []byte {

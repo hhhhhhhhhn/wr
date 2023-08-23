@@ -3,6 +3,7 @@
 - Abstracting input
 - Do something about inverted cursors
 - Fix word movement on single character words
+- Actually disabling treesitter
 
 ## Done
 - Visually represent when command fails (red statusbar)

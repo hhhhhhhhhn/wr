@@ -1,4 +1,4 @@
-package treesitter
+package advancedtui
 
 import (
 	"bufio"
@@ -10,7 +10,6 @@ import (
 	"github.com/hhhhhhhhhn/hexes"
 	"github.com/hhhhhhhhhn/wr/core"
 	"github.com/hhhhhhhhhn/wr/tui"
-	sitter "github.com/smacker/go-tree-sitter"
 )
 
 type Renderer = tui.Renderer
@@ -18,14 +17,14 @@ type Renderer = tui.Renderer
 type Tui struct {
 	out          *bufio.Writer
 	renderer     *hexes.Renderer
-	buffer       *Buffer
 	scroll       int
 	statusText   string
 	statusOk     bool
 	getAttribute func(string) hexes.Attribute
+	provider     SyntaxProvider
 }
 
-func NewTui(buffer *Buffer, getAttribute func(string) hexes.Attribute) *Tui {
+func NewTui() *Tui {
 	out := bufio.NewWriterSize(os.Stdout, 4096)
 	in  := os.Stdin
 	renderer := hexes.New(in, out)
@@ -37,9 +36,12 @@ func NewTui(buffer *Buffer, getAttribute func(string) hexes.Attribute) *Tui {
 		scroll: 0,
 		statusText: "",
 		statusOk: true,
-		buffer: buffer,
-		getAttribute: getAttribute,
+		provider: &NoHighlight{},
 	}
+}
+
+func (t *Tui) SetSyntaxProvider(provider SyntaxProvider) {
+	t.provider = provider
 }
 
 func (t *Tui) fillBlank() {
@@ -56,10 +58,10 @@ func (t *Tui) RenderEditor(e *core.Editor) {
 	t.scroll = handleScroll(e, renderRows, t.scroll)
 
 	lineAmount := e.Buffer.GetLength()
-	t.buffer.UpdateTreesitter()
-	captures := t.buffer.GetCaptures(t.scroll, t.scroll + renderRows)
+	t.provider.BeforeRender()
+	highlights := t.provider.GetHighlights(t.scroll, t.scroll + renderRows)
 	for row := t.scroll; row < t.scroll + renderRows && row < lineAmount; row++ {
-		printLine(e, t, captures[row - t.scroll], t.buffer.query, row, t.scroll)
+		printLine(e, t, highlights[row - t.scroll], row, t.scroll)
 	}
 
 	printStatusBar(e, t.renderer, t.statusText, t.statusOk)
@@ -104,7 +106,7 @@ func getLineAsString(e *core.Editor, row int) string {
 	return strings.ReplaceAll(string(e.Buffer.GetLine(row)), "\t", strings.Repeat(" ", e.Config.Tabsize))
 }
 
-func printLine(e *core.Editor, tui *Tui, captures []sitter.QueryCapture, query *sitter.Query, row, scroll int) {
+func printLine(e *core.Editor, tui *Tui, highlights []Highlight, row, scroll int) {
 	line := e.Buffer.GetLine(row)
 	originalLineCols  := core.ColumnSpan(e, line)
 	if originalLineCols < tui.renderer.Cols {
@@ -115,8 +117,8 @@ func printLine(e *core.Editor, tui *Tui, captures []sitter.QueryCapture, query *
 	byt := 0
 	for _, chr := range line {
 		// Advances the captures
-		for len(captures) > 1 && byt >= int(captures[1].Node.StartPoint().Column) {
-			captures = captures[1:]
+		for len(highlights) > 1 && byt >= highlights[1].Byte {
+			highlights = highlights[1:]
 		}
 
 		withinCursor, withinLast, cursor := isWithinCursor(e, row, col)
@@ -126,10 +128,8 @@ func printLine(e *core.Editor, tui *Tui, captures []sitter.QueryCapture, query *
 			} else {
 				tui.renderer.SetAttribute(attrCursor)
 			}
-		} else if len(captures) > 0 {
-			name := query.CaptureNameForId(captures[0].Index)
-			// fmt.Fprintln(os.Stderr, name, captures[0].Index)
-			tui.renderer.SetAttribute(tui.getAttribute(name))
+		} else if len(highlights) > 0 {
+			tui.renderer.SetAttribute(highlights[0].Attribute)
 		}
 		if chr == '\t' {
 			tui.renderer.SetString(row - scroll, col, strings.Repeat(" ", e.Config.Tabsize))

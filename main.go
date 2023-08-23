@@ -12,6 +12,7 @@ import (
 	"github.com/hhhhhhhhhn/wr/core"
 	"github.com/hhhhhhhhhn/wr/treesitter"
 	"github.com/hhhhhhhhhn/wr/tui"
+	"github.com/hhhhhhhhhn/wr/advancedtui"
 )
 
 var scroll = 0
@@ -54,9 +55,13 @@ func main() {
 			"Filename": f.file,
 		},
 	}
+	syntaxProvider := treesitter.NewSyntaxProvider(buffer, getAttribute)
 	listener = input.New(os.Stdin)
 	core.SetCursors(0, 0, 0, 1)(editor)
-	renderer = treesitter.NewTui(buffer, getAttribute)
+	// renderer = treesitter.NewTui(buffer, getAttribute)
+	tui := advancedtui.NewTui()
+	tui.SetSyntaxProvider(syntaxProvider)
+	renderer = tui
 
 	normalMode()
 }

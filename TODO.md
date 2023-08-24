@@ -3,7 +3,7 @@
 - Abstracting input
 - Do something about inverted cursors
 - Fix word movement on single character words
-- Actually disabling treesitter
+- Allow for reverting to normal with no active highlight (e.g. a + b)
 
 ## Done
 - Visually represent when command fails (red statusbar)
@@ -24,3 +24,4 @@
 - Show OOB cursors
 - Better command interactivity
 - Improve treesitter performance
+- Actually disabling treesitter

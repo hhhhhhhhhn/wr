@@ -10,17 +10,20 @@ import (
 	"github.com/hhhhhhhhhn/hexes/input"
 	"github.com/hhhhhhhhhn/hexes"
 	"github.com/hhhhhhhhhn/wr/core"
-	"github.com/hhhhhhhhhn/wr/treesitter"
 	"github.com/hhhhhhhhhn/wr/tui"
+	"github.com/hhhhhhhhhn/wr/treesitter"
 	"github.com/hhhhhhhhhn/wr/advancedtui"
 )
 
 var scroll = 0
-var editor *core.Editor
-var renderer tui.Renderer
-var listener *input.Listener
-var buffer   *treesitter.Buffer
-var syntaxOn = true
+var editor         *core.Editor
+var renderer       *advancedtui.Tui
+var listener       *input.Listener
+var buffer         *treesitter.Buffer
+var syntaxProvider advancedtui.SyntaxProvider
+
+var _ tui.Renderer = renderer
+var _ core.Buffer = buffer
 
 func memoryProfile() {
 	file, _ := os.Create("memprof")
@@ -55,13 +58,11 @@ func main() {
 			"Filename": f.file,
 		},
 	}
-	syntaxProvider := treesitter.NewSyntaxProvider(buffer, getAttribute)
+	syntaxProvider = treesitter.NewSyntaxProvider(buffer, getAttribute)
 	listener = input.New(os.Stdin)
 	core.SetCursors(0, 0, 0, 1)(editor)
-	// renderer = treesitter.NewTui(buffer, getAttribute)
-	tui := advancedtui.NewTui()
-	tui.SetSyntaxProvider(syntaxProvider)
-	renderer = tui
+	renderer = advancedtui.NewTui()
+	renderer.SetSyntaxProvider(syntaxProvider)
 
 	normalMode()
 }
@@ -82,20 +83,18 @@ func loadBuffer(filename string, buffer core.Buffer) {
 }
 
 func getAttribute(name string) hexes.Attribute {
-	if !syntaxOn {
-		return hexes.NORMAL
-	}
-	switch name {
-	case "string":
-		return hexes.Join(hexes.NORMAL, hexes.BLUE, hexes.ITALIC)
-	case "comment":
-		return hexes.Join(hexes.NORMAL, hexes.BLACK, hexes.BOLD, hexes.ITALIC)
-	case "keyword":
-		return hexes.Join(hexes.NORMAL, hexes.GREEN)
-	case "number":
-		return hexes.Join(hexes.NORMAL, hexes.CYAN)
-	case "type":
+	if strings.HasPrefix(name, "type") {
 		return hexes.Join(hexes.NORMAL, hexes.YELLOW)
+	} else if strings.HasPrefix(name, "string") {
+		return hexes.Join(hexes.NORMAL, hexes.BLUE, hexes.ITALIC)
+	} else if strings.HasPrefix(name, "keyword") {
+		return hexes.Join(hexes.NORMAL, hexes.GREEN)
+	} else if strings.HasPrefix(name, "comment") {
+		return hexes.Join(hexes.NORMAL, hexes.BLACK, hexes.BOLD, hexes.ITALIC)
+	} else if strings.HasPrefix(name, "number") {
+		return hexes.Join(hexes.NORMAL, hexes.CYAN)
+	} else if strings.HasPrefix(name, "property") {
+		return hexes.Join(hexes.NORMAL, hexes.BLUE)
 	}
 	return hexes.NORMAL
 }

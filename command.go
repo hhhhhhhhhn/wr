@@ -10,6 +10,7 @@ import (
 	"github.com/hhhhhhhhhn/hexes/input"
 	"github.com/hhhhhhhhhn/wr/core"
 	"github.com/hhhhhhhhhn/wr/treesitter"
+	"github.com/hhhhhhhhhn/wr/advancedtui"
 )
 
 func commandMode(command string) {
@@ -155,8 +156,17 @@ var commands = map[string] func([]string)(output string, ok bool) {
 		buffer.SetLanguage(*lang)
 		return "set language to " + args[1], true
 	},
-	"syntax": func([]string) (string, bool) {
-		syntaxOn = !syntaxOn
-		return "", true
+	"syntax": func(args []string) (string, bool) {
+		if len(args) != 2 {
+			return "please provide exactly one provider (none or treesitter)", false
+		} else if args[1] == "none" {
+			renderer.SetSyntaxProvider(&advancedtui.NoHighlight{})
+			return "", true
+		} else if args[1] == "treesitter" {
+			renderer.SetSyntaxProvider(syntaxProvider)
+			return "", true
+		} else {
+			return "unknown syntax provider: " + args[1], false
+		}
 	},
 }

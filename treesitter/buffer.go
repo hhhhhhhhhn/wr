@@ -150,6 +150,11 @@ func (b *Buffer) UpdateTreesitter() {
 }
 
 func (b *Buffer) GetCaptures(startRow, endRow int) [][]sitter.QueryCapture {
+	if b.tree == nil {
+		b.treesitterIsValid = false
+		b.UpdateTreesitter()
+	}
+
 	b.queryCursor.SetPointRange(
 		sitter.Point{
 			Row: uint32(startRow),
@@ -160,7 +165,6 @@ func (b *Buffer) GetCaptures(startRow, endRow int) [][]sitter.QueryCapture {
 			Column: 0,
 		},
 	)
-
 	b.queryCursor.Exec(b.query, b.tree.RootNode())
 
 	var captures []sitter.QueryCapture
